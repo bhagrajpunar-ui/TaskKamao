@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<title>TaskKamao Setup Guide (Hinglish)</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 18mm 16mm;
+  @bottom-center { content: "TaskKamao Setup Guide  •  Page " counter(page) " / " counter(pages); font-size: 8.5pt; color: #888; } }
+body { font-family: "DejaVu Sans", sans-serif; font-size: 10pt; line-height: 1.45; color: #222; }
+h1 { color: #E65100; font-size: 22pt; margin: 0 0 4pt; }
+h2 { color: #E65100; font-size: 14pt; border-bottom: 2px solid #FFB74D; padding-bottom: 3pt; margin-top: 18pt; page-break-after: avoid; }
+h3 { font-size: 11.5pt; margin: 12pt 0 4pt; color: #333; page-break-after: avoid; }
+code, pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.6pt; }
+code { background: #f4f4f4; padding: 0 2pt; border-radius: 2pt; }
+pre { background: #263238; color: #eceff1; padding: 7pt 9pt; border-radius: 4pt; white-space: pre-wrap; word-break: break-all; page-break-inside: avoid; }
+.path { background: #FFF3E0; border-left: 4px solid #FF8F00; padding: 5pt 8pt; margin: 6pt 0; page-break-inside: avoid; }
+.warn { background: #FFEBEE; border-left: 4px solid #C62828; padding: 6pt 9pt; margin: 8pt 0; page-break-inside: avoid; }
+.ok { background: #E8F5E9; border-left: 4px solid #2E7D32; padding: 6pt 9pt; margin: 8pt 0; page-break-inside: avoid; }
+.note { background: #E3F2FD; border-left: 4px solid #1565C0; padding: 6pt 9pt; margin: 8pt 0; page-break-inside: avoid; }
+table { border-collapse: collapse; width: 100%; margin: 6pt 0; font-size: 9pt; page-break-inside: avoid; }
+th, td { border: 1px solid #ccc; padding: 4pt 5pt; text-align: left; vertical-align: top; }
+th { background: #FFE0B2; }
+ol, ul { margin: 4pt 0 4pt 0; padding-left: 16pt; }
+li { margin: 2pt 0; }
+.cover { text-align: center; padding-top: 50mm; page-break-after: always; }
+.cover .tag { font-size: 15pt; color: #555; }
+.cover .sub { margin-top: 18pt; font-size: 11pt; }
+.small { font-size: 8.5pt; color: #666; }
+.check li { list-style: none; }
+.check li:before { content: "☐  "; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1 style="font-size:34pt">TaskKamao</h1>
+  <div class="tag">"Task karo, coins kamao"</div>
+  <div class="sub"><b>Setup Guide — Step by Step (Hinglish)</b><br>Accounts banana • Firebase • AdMob • RazorpayX • App build • Play Store</div>
+  <div class="sub small">Bhagraj ke liye — Jaipur • Yeh guide khud follow karein ya apne developer ko dein.<br>
+  Version 1.0 • Console menus kabhi-kabhi badalte rehte hain; naam thoda alag dikhe to wahi milta-julta option chunein.</div>
+</div>
+
+<h2>0. Shuru karne se pehle — 5 zaroori baatein (dhyan se padhein)</h2>
+<div class="warn"><b>1. Kamai ki koi guarantee nahi.</b> Users ko jo paise milte hain woh aapki ad/offerwall kamai se aate hain. Agar ad revenue kam hai aur payout zyada, to nuksaan aapka hai. App mein ya Play Store par "roz ₹500 kamao", "ghar baithe income", "sote-sote kamao" jaisi baatein <b>kabhi na likhein</b> — Google Play misleading claims par app hata deta hai.</div>
+<div class="warn"><b>2. "Add Money" / deposit nahi hai — aur add bhi mat karna.</b> Users se paisa lekar rakhne ke liye RBI ka PPI license chahiye. Yeh app sirf kamaye hue rewards UPI par bhejta hai.</div>
+<div class="warn"><b>3. Video ads ke coins withdraw nahi hote (by default).</b> Google AdMob ki policy ("Policies for ad units that offer rewards") ke hisaab se rewarded video ke badle aisa reward nahi de sakte jo cash mein badla ja sake. Isliye code mein video dekhne par <b>"video points"</b> milte hain (sirf leaderboard ke liye). Withdraw hone wale coins quiz, check-in, spin, scratch, offers aur referral se aate hain. Ise badalne ki koshish na karein, warna AdMob account band ho sakta hai.</div>
+<div class="note"><b>4. Legal/CA salah lein.</b> Rewards par TDS/GST, spin/scratch jaise chance-based features, aur India ke online gaming niyam — launch se pehle ek CA/lawyer se baat zaroor karein. Spin aur scratch ko admin panel se kabhi bhi band kar sakte hain (Tasks &gt; active = false).</div>
+<div class="note"><b>5. Kharcha pehle se socho.</b> Default mein daily check-in 50 coins (₹0.50) hai. 1,000 users roz check-in karein to sirf check-in ka kharcha ₹500/din = ₹15,000/mahina. Shuruaat mein admin panel &gt; Config mein <code>checkinCoins</code> kam (jaise 5–10) rakhna samajhdari hai, jab tak asli kamai ka andaza na lage.</div>
+
+<h2>1. Kaun-kaun se accounts banane hain</h2>
+<table>
+<tr><th>Account</th><th>Kis liye</th><th>Kharcha / Note</th></tr>
+<tr><td><b>Google account</b> (Gmail)</td><td>Sab cheezon ka login</td><td>Free. Ek alag business Gmail banana behtar.</td></tr>
+<tr><td><b>Firebase</b> (console.firebase.google.com)</td><td>Login (OTP), database, server code</td><td>Spark plan free hai, lekin <b>Cloud Functions ke liye Blaze (pay-as-you-go) plan zaroori</b> — card/UPI autopay lagana padega. Chhote use par bill aksar kam aata hai; budget alert zaroor lagayein.</td></tr>
+<tr><td><b>Google AdMob</b> (admob.google.com)</td><td>Ads se kamai</td><td>Free. Payment ke liye PAN/bank details. Kamai ki guarantee nahi.</td></tr>
+<tr><td><b>RazorpayX</b> (x.razorpay.com)</td><td>Users ko UPI payout</td><td>Business account + KYC. Aam taur par <b>registered business</b> (proprietorship/company), business PAN, kai cases mein GST, bank details maange jaate hain. Current account mein minimum balance aur har payout par fees (published pricing: UPI ₹1,000 se kam par ₹4 + GST — sign-up ke time current rate check karein).</td></tr>
+<tr><td><b>Alternative: Cashfree Payouts</b> (cashfree.com)</td><td>RazorpayX na mile to</td><td>Ise bhi business KYC chahiye. Code mein sirf <code>functions/src/payouts.ts</code> badalni hogi (developer kar dega).</td></tr>
+<tr><td><b>Google Play Console</b> (play.google.com/console)</td><td>App publish karna</td><td><b>$25 ek baar</b> (~₹2,100–2,200). Identity verification. Naye <b>personal</b> developer accounts ko production se pehle closed testing karni padti hai (abhi ki rule: kam se kam 12 testers, 14 din lagatar — Play Console mein current number check karein). Organization account (D-U-N-S number) par yeh rule alag hai.</td></tr>
+<tr><td><b>Website / Privacy page</b></td><td>Privacy Policy, Terms, account delete page</td><td>Firebase Hosting free hai. Domain chahiye to ~₹500–1,000/saal.</td></tr>
+</table>
+
+<h2>2. Apne PC (Windows) par tools install karna</h2>
+<p>Developer ko de rahe ho to yeh section unka hai. Khud kar rahe ho to ek-ek karke karein:</p>
+<ol>
+<li><b>Git</b>: git-scm.com &gt; Download for Windows &gt; install (sab default).</li>
+<li><b>Node.js 20 LTS</b>: nodejs.org &gt; "20.x LTS" installer &gt; install. Check: CMD kholkar <code>node -v</code> (v20.x dikhna chahiye).</li>
+<li><b>Android Studio</b>: developer.android.com/studio &gt; Download &gt; install. Pehli baar kholne par "Standard" setup chunein (Android SDK, emulator aa jayega).<br>
+Android Studio &gt; More Actions &gt; SDK Manager &gt; <b>SDK Platforms</b>: Android 15 (API 35) tick &gt; <b>SDK Tools</b>: "Android SDK Command-line Tools" tick &gt; Apply.</li>
+<li><b>Flutter SDK</b>: docs.flutter.dev &gt; Get started &gt; Install &gt; Windows &gt; Android &gt; zip download karein (stable, 3.24 ya naya).<br>
+Zip ko <code>C:\src\flutter</code> mein extract karein (Program Files mein nahi).<br>
+Start &gt; "Edit the system environment variables" &gt; Environment Variables &gt; User variables &gt; <b>Path</b> &gt; Edit &gt; New &gt; <code>C:\src\flutter\bin</code> &gt; OK.</li>
+<li>Naya CMD kholein aur chalayein:
+<pre>flutter doctor
+flutter doctor --android-licenses     (sab mein "y" dabayein)</pre>
+Jab tak "Flutter" aur "Android toolchain" ke aage ✓ na aaye, jo bataya jaye woh fix karein.</li>
+<li><b>Firebase CLI</b>:
+<pre>npm install -g firebase-tools
+firebase login</pre></li>
+<li>Project zip (<code>TaskKamao_source.zip</code>) ko <code>C:\projects\taskkamao</code> mein extract karein. Aage ke saare commands isi folder se.</li>
+</ol>
+
+<h2>3. Firebase project banana (exact click path)</h2>
+<h3>3.1 Project</h3>
+<div class="path">console.firebase.google.com &gt; <b>Create a project</b> (ya "Add project") &gt; Name: <b>TaskKamao</b> &gt; Continue &gt; Google Analytics (on rakh sakte hain) &gt; Create project.</div>
+<p>Project ID note karein (jaise <code>taskkamao-1a2b3</code>). File <code>.firebaserc</code> kholkar <code>YOUR-FIREBASE-PROJECT-ID</code> ki jagah yeh ID likhein.</p>
+
+<h3>3.2 Blaze plan + budget alert</h3>
+<div class="path">Console mein neeche-left plan ka naam (<b>Spark</b>) &gt; <b>Upgrade</b> &gt; Blaze &gt; billing account banayein/chunein (card) &gt; budget amount set karein (jaise ₹1,000) &gt; Purchase.</div>
+<p>Alag se: console.cloud.google.com &gt; Billing &gt; <b>Budgets &amp; alerts</b> &gt; Create budget &gt; ₹1,000 &gt; alerts 50%/90%/100% par email.</p>
+
+<h3>3.3 Login (Phone OTP) chalu karna</h3>
+<div class="path">Build (left menu) &gt; <b>Authentication</b> &gt; Get started &gt; <b>Sign-in method</b> &gt; <b>Phone</b> &gt; Enable &gt; Save.</div>
+<div class="path">Isi page par <b>Email/Password</b> &gt; Enable &gt; Save (yeh sirf admin panel login ke liye hai).</div>
+<div class="path">Authentication &gt; <b>Settings</b> &gt; <b>SMS region policy</b> &gt; Allow &gt; sirf <b>India</b> chunein &gt; Save. (SMS fraud se bachata hai.)</div>
+<div class="path">Testing ke liye: Sign-in method &gt; Phone &gt; <b>Phone numbers for testing</b> &gt; ek number + 6 digit code daalein (jaise +91 99999 00001 / 123456). Play Store review team ko bhi yahi dena hai.</div>
+
+<h3>3.4 Database (Firestore)</h3>
+<div class="path">Build &gt; <b>Firestore Database</b> &gt; Create database &gt; Location: <b>asia-south1 (Mumbai)</b> &gt; <b>Start in production mode</b> &gt; Create.</div>
+<p class="small">Location baad mein badal nahi sakte. Code bhi Mumbai region (asia-south1) maan kar likha hai.</p>
+
+<h3>3.5 Android app jodna + google-services.json</h3>
+<ol>
+<li>Pehle SHA-1 nikalein (PC par, project folder mein):
+<pre>cd app
+flutter pub get
+cd android
+gradlew signingReport</pre>
+Output mein "Variant: debug" ke neeche <b>SHA1</b> aur <b>SHA-256</b> copy karein.<br><span class="small">Yeh command na chale to debug key seedha keytool se dekh sakte hain:</span>
+<pre>keytool -list -v -keystore "%USERPROFILE%\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android</pre></li>
+<li><div class="path">Project Overview ke paas ⚙️ (gear) &gt; <b>Project settings</b> &gt; General &gt; neeche "Your apps" &gt; <b>Android icon</b> &gt; Package name: <b>com.taskkamao.app</b> &gt; Nickname: TaskKamao &gt; Debug SHA-1 paste &gt; <b>Register app</b> &gt; <b>Download google-services.json</b>.</div></li>
+<li>File ko yahan rakhein: <code>app\android\app\google-services.json</code> (baaki Firebase steps "Next" karke skip kar sakte hain — code mein pehle se hai).</li>
+<li>Usi page par app ke neeche <b>Add fingerprint</b> se SHA-256 bhi daalein. Release keystore banane ke baad (Section 8) uska SHA-1/SHA-256 bhi daalna, aur Play Console &gt; Test and release &gt; Setup &gt; <b>App signing</b> wale "App signing key certificate" ke SHA-1/SHA-256 bhi. <b>Yeh na kiya to Play Store wale app mein OTP nahi aayega.</b></li>
+</ol>
+
+<h3>3.6 Web app config (admin panel ke liye)</h3>
+<div class="path">Project settings &gt; General &gt; Your apps &gt; <b>Add app</b> &gt; Web (<b>&lt;/&gt;</b>) &gt; Nickname: TaskKamao Admin &gt; Register &gt; jo <code>firebaseConfig = {...}</code> dikhe use copy karein.</div>
+<p><code>admin\index.html</code> kholein, <code>const firebaseConfig = { apiKey: "TODO", ...}</code> waali jagah apni values paste karein. (Yeh web keys secret nahi hain; security rules aur admin claim se hoti hai.)</p>
+
+<h3>3.7 Service account key (seed aur admin script ke liye)</h3>
+<div class="path">Project settings &gt; <b>Service accounts</b> &gt; Firebase Admin SDK &gt; <b>Generate new private key</b> &gt; Generate key.</div>
+<p>Downloaded JSON ko <code>functions\serviceAccount.json</code> naam se save karein. <b>Yeh file kisi ko na bhejein, GitHub par na daalein.</b></p>
+
+<h2>4. Code mein apni details daalna (TODO list)</h2>
+<table>
+<tr><th>File</th><th>Kya badalna hai</th></tr>
+<tr><td><code>.firebaserc</code></td><td>Firebase project ID</td></tr>
+<tr><td><code>admin/index.html</code></td><td>firebaseConfig (Section 3.6)</td></tr>
+<tr><td><code>app/android/app/google-services.json</code></td><td>Nayi file rakhni hai (Section 3.5)</td></tr>
+<tr><td><code>app/android/app/src/main/AndroidManifest.xml</code></td><td>AdMob <b>App ID</b> (abhi Google ka TEST id hai) — Section 6</td></tr>
+<tr><td><code>app/lib/core/app_config.dart</code></td><td>Rewarded <b>ad unit id</b> (abhi TEST), Privacy/Terms/Delete-account URLs, support email</td></tr>
+<tr><td><code>docs/PRIVACY_POLICY.md</code>, <code>docs/TERMS.md</code></td><td>Saare [PLACEHOLDER] bharein, website par daalein</td></tr>
+</table>
+
+<h2>5. Backend deploy karna (Functions + Rules)</h2>
+<p>CMD project folder (<code>C:\projects\taskkamao</code>) mein:</p>
+<pre>firebase use --add                 (apna project chunein, alias: default)
+cd functions
+npm install
+cd ..</pre>
+<h3>5.1 Secrets daalna (RazorpayX keys yahan jaati hain — code mein nahi)</h3>
+<p>Pehle RazorpayX ki <b>Test mode</b> keys use karein (Section 7). Har command par value paste karke Enter:</p>
+<pre>firebase functions:secrets:set RAZORPAYX_KEY_ID
+firebase functions:secrets:set RAZORPAYX_KEY_SECRET
+firebase functions:secrets:set RAZORPAYX_WEBHOOK_SECRET
+firebase functions:secrets:set OFFERWALL_SECRET</pre>
+<p class="small">WEBHOOK_SECRET aur OFFERWALL_SECRET aap khud koi lamba random password bana sakte hain (20+ characters). Webhook wala RazorpayX dashboard mein bhi same daalna hai.</p>
+<h3>5.2 Deploy</h3>
+<pre>firebase deploy --only firestore:rules,firestore:indexes
+firebase deploy --only functions</pre>
+<p>Pehli baar <b>RAZORPAYX_ACCOUNT_NUMBER</b> poochega — RazorpayX dashboard se apna account number daalein (abhi na ho to test account number). Indexes banne mein 5–10 minute lag sakte hain.</p>
+<div class="path">Deploy ke baad: Firebase Console &gt; Build &gt; <b>Functions</b> — list mein <code>verifyRewardedAd</code>, <code>razorpayWebhook</code>, <code>offerwallPostback</code> ke URL dikhenge (jaise https://asia-south1-PROJECT.cloudfunctions.net/verifyRewardedAd). Inhe note karein.</div>
+
+<h3>5.3 Tasks, quiz aur config daalna (seed) + admin banana</h3>
+<pre>cd functions
+set GOOGLE_APPLICATION_CREDENTIALS=serviceAccount.json
+npm run seed</pre>
+<div class="path">Firebase Console &gt; Authentication &gt; <b>Users</b> &gt; Add user &gt; apna admin email + strong password.</div>
+<pre>node scripts/setAdmin.js aapka-admin@email.com
+cd ..
+firebase deploy --only hosting</pre>
+<p>Ab <b>https://PROJECT-ID.web.app</b> kholkar admin email/password se login karein. Yahan se: pending withdrawals, KYC verify, users block/unblock, tasks aur quiz add, config badalna.</p>
+
+<h2>6. Google AdMob setup</h2>
+<ol>
+<li><div class="path">admob.google.com &gt; Sign up (business Gmail) &gt; country India, payment details.</div></li>
+<li><div class="path">Apps &gt; <b>Add app</b> &gt; Android &gt; "Is the app listed on a supported app store?" &gt; <b>No</b> (abhi) &gt; App name: TaskKamao &gt; Add app.</div>
+<b>App ID</b> (<code>ca-app-pub-XXXX~YYYY</code>) copy karke <code>AndroidManifest.xml</code> mein TEST id ki jagah daalein.</li>
+<li><div class="path">App &gt; <b>Ad units</b> &gt; Add ad unit &gt; <b>Rewarded</b> &gt; Name: video_task &gt; Reward amount: 5, Reward item: points &gt; <b>Server-side verification</b>: callback URL mein <code>verifyRewardedAd</code> ka URL &gt; Create ad unit.</div>
+Ad unit ID (<code>ca-app-pub-XXXX/ZZZZ</code>) ko <code>app_config.dart</code> ke <code>rewardedAdUnitId</code> mein daalein.</li>
+<li>Development ke time apne phone ko <b>test device</b> banayein (AdMob &gt; Settings &gt; Test devices) — apne hi ads par click karna AdMob account ban karwa sakta hai.</li>
+<li>App Play Store par aane ke baad: AdMob &gt; App settings &gt; <b>Link to app store</b>, aur website par <b>app-ads.txt</b> lagayein (AdMob batata hai kya likhna hai).</li>
+</ol>
+<div class="note">Rewarded ad tabhi dikhna chahiye jab user khud button dabaye, aur pehle saaf likha ho ki kya milega ("+5 pts"). App mein yeh pehle se aisa hi bana hai. "Ad dekh kar humari madad karein" jaisa text na likhein.</div>
+
+<h2>7. RazorpayX (UPI payout) setup</h2>
+<ol>
+<li><div class="path">x.razorpay.com &gt; Sign up &gt; business type chunein &gt; business PAN, GST (agar hai), bank account, address &gt; documents upload &gt; KYC/verification ka intezaar.</div></li>
+<li>Current account khulwane / activate hone ke baad usme funds daalein (payout isi balance se jaata hai).</li>
+<li><div class="path">Dashboard &gt; <b>Account &amp; Settings</b> (ya Settings) &gt; <b>API Keys</b> &gt; Generate Key &gt; Key ID + Key Secret copy (secret dobara nahi dikhega).</div>
+Inhe Section 5.1 wale commands se secrets mein daalein. Shuru mein <b>Test Mode</b> keys.</li>
+<li><div class="path">Settings &gt; <b>Webhooks</b> &gt; Add New Webhook &gt; URL: <code>razorpayWebhook</code> ka URL &gt; Secret: wahi jo RAZORPAYX_WEBHOOK_SECRET mein daala &gt; Events: <b>payout.processed, payout.failed, payout.reversed, payout.rejected, payout.updated</b> &gt; Save.</div></li>
+<li>Account number (dashboard par dikhta hai) deploy ke time RAZORPAYX_ACCOUNT_NUMBER mein jaata hai.</li>
+<li>Test mode mein poora flow chalayein (Section 10). Sab sahi ho tab Live keys se secrets update karein:
+<pre>firebase functions:secrets:set RAZORPAYX_KEY_ID      (live key)
+firebase functions:secrets:set RAZORPAYX_KEY_SECRET  (live secret)
+firebase deploy --only functions</pre></li>
+</ol>
+<div class="warn">Business registration/GST nahi hai to RazorpayX ya Cashfree approval mushkil ho sakta hai. Pehle proprietorship + Udyam/GST ke baare mein apne CA se baat karein. Bina payout partner ke withdrawal feature live na karein — admin panel &gt; Config mein <code>"payoutsEnabled": false</code> rakh sakte hain.</div>
+
+<h2>8. App chalana aur Release build (AAB) banana</h2>
+<h3>8.1 Phone par test</h3>
+<p>Phone mein: Settings &gt; About phone &gt; Build number par 7 baar tap (Developer options) &gt; Developer options &gt; <b>USB debugging</b> ON. USB se PC se jodein.</p>
+<pre>cd app
+flutter pub get
+flutter run</pre>
+<h3>8.2 Upload keystore (sirf ek baar — file aur password sambhal kar rakhein)</h3>
+<pre>cd app\android\app
+keytool -genkey -v -keystore upload-keystore.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload</pre>
+<p class="small">"keytool not found" aaye to Android Studio ke andar wala use karein: <code>"C:\Program Files\Android\Android Studio\jbr\bin\keytool"</code></p>
+<p><code>app\android\key.properties.example</code> ko copy karke <code>app\android\key.properties</code> banayein aur passwords bharein (storeFile=upload-keystore.jks).</p>
+<h3>8.3 Build</h3>
+<pre>cd app
+flutter build appbundle --release</pre>
+<p>Output: <code>app\build\app\outputs\bundle\release\app-release.aab</code> — yahi Play Console par upload hoti hai. (Side-testing ke liye <code>flutter build apk --release</code>.)</p>
+<p>Har naye version se pehle <code>app/pubspec.yaml</code> mein <code>version: 1.0.0+1</code> ka aakhri number badhayein (1.0.1+2, ...).</p>
+
+<h2>9. Play Store listing — kya-kya chahiye</h2>
+<h3>9.1 App banana</h3>
+<div class="path">play.google.com/console &gt; <b>Create app</b> &gt; App name: TaskKamao &gt; Language: English (India) / Hindi &gt; <b>App</b> (Game nahi) &gt; <b>Free</b> &gt; declarations tick &gt; Create app.</div>
+<p class="small">Category "Game" na chunein — Play ki loyalty-program policy game apps mein chance-based rewards (spin/scratch) allow nahi karti. Non-game category (jaise Entertainment/Lifestyle) chunein.</p>
+<h3>9.2 App content (Policy &gt; App content) — sab bharna zaroori</h3>
+<table>
+<tr><th>Section</th><th>Kya bharein</th></tr>
+<tr><td>Privacy policy</td><td>Aapki website par hosted Privacy Policy ka URL</td></tr>
+<tr><td>App access</td><td>"All or some functionality is restricted" &gt; test phone number + OTP (Section 3.3) aur steps likhein</td></tr>
+<tr><td>Ads</td><td><b>Yes, my app contains ads</b></td></tr>
+<tr><td>Content rating</td><td>Questionnaire sach-sach bharein (category: Utility/Other — rewards, no gambling with money)</td></tr>
+<tr><td>Target audience</td><td><b>18 and over</b> only</td></tr>
+<tr><td>Data safety</td><td>Neeche wali table dekhein</td></tr>
+<tr><td>Advertising ID</td><td>Yes — ads (AdMob) ke liye use hota hai</td></tr>
+<tr><td>Financial features</td><td>Declaration sach-sach bharein: app loan, deposit, wallet ya investment nahi deta; sirf kamaye hue rewards ka UPI payout karta hai. Koi option clear na ho to Play support se poochhein.</td></tr>
+<tr><td>Account deletion</td><td>In-app path (Profile &gt; Account delete karein) + web URL jahan deletion request kar sakein</td></tr>
+<tr><td>Government app / News / Health</td><td>No</td></tr>
+</table>
+<h3>9.3 Data safety form — kya declare karna hai</h3>
+<table>
+<tr><th>Data type</th><th>Collected?</th><th>Purpose</th></tr>
+<tr><td>Personal info: Name, Phone number</td><td>Yes (required)</td><td>Account management, Fraud prevention</td></tr>
+<tr><td>Personal info: Other info (PAN)</td><td>Yes (optional — sirf withdrawal ke liye)</td><td>Fraud prevention, Compliance</td></tr>
+<tr><td>Financial info: Other (UPI ID)</td><td>Yes (optional)</td><td>App functionality (payout)</td></tr>
+<tr><td>App activity: In-app actions</td><td>Yes</td><td>App functionality, Fraud prevention</td></tr>
+<tr><td>Device or other IDs</td><td>Yes</td><td>Advertising, Fraud prevention/security</td></tr>
+<tr><td>Shared with third parties</td><td colspan="2">Yes: ad network (AdMob – device ID), payout partner (name, phone, UPI ID for payout)</td></tr>
+<tr><td>Encrypted in transit</td><td colspan="2">Yes</td></tr>
+<tr><td>Users can request deletion</td><td colspan="2">Yes</td></tr>
+</table>
+<p class="small">Agar Crashlytics/Analytics jodte hain to unka data bhi declare karein. SDKs ke latest "data safety" guides (Firebase, AdMob) ek baar zaroor milaa lein.</p>
+
+<h3>9.4 Store listing text — kya likhein, kya nahi</h3>
+<div class="ok"><b>Achha (allowed):</b> "TaskKamao ek rewards app hai. Daily check-in, quiz, spin aur partner offers poore karke coins kamaayein. 100 coins = ₹1, minimum withdrawal ₹50 (KYC ke baad UPI par). Rewards tasks aur offers ki availability par nirbhar hain."</div>
+<div class="warn"><b>Mat likho:</b> "Roz ₹500 kamao", "Guaranteed income", "Ghar baithe salary", "Sote-sote kamai", "Paytm cash instantly", "Best earning app No.1", jhoothe payment-proof screenshots, kisi famous app/brand ka logo.</div>
+<p>Zaroori assets: app icon 512×512 (project mein <code>docs/play_store_icon_512.png</code>), feature graphic 1024×500, kam se kam 2 phone screenshots (asli app ke), short description (80 characters), full description.</p>
+
+<h3>9.5 Testing track se release tak</h3>
+<div class="path">Test and release &gt; Testing &gt; <b>Closed testing</b> &gt; Create track &gt; Create new release &gt; app-release.aab upload &gt; release notes &gt; Save &gt; Review &gt; Start rollout. Testers (Gmail list) add karein.</div>
+<p>Personal account par: required testers (abhi 12) ko 14 din lagatar opted-in rakhein, phir <b>Apply for production</b>. Review mein kuch din lag sakte hain.</p>
+
+<h2>10. Testing checklist (launch se pehle sab tick karein)</h2>
+<ul class="check">
+<li>Naye number se OTP login hota hai; galat OTP par error aata hai</li>
+<li>Signup par referral code daalne se friend ki list mein "Pending" dikhta hai; galat code par "bina referral aage badho" option aata hai</li>
+<li>Usi phone par doosre number se login karne par "ek device par ek account" error aata hai</li>
+<li>Daily check-in ek hi baar hota hai; agle din streak +1; ek din chhodne par streak 1 se shuru</li>
+<li>Quiz: sahi jawab par coins, galat par 0; wahi sawal dobara nahi aata; daily limit ke baad roka jata hai</li>
+<li>Spin 1/din, scratch 3/din; limit ke baad error</li>
+<li>Video (test ad): poora dekhne par "video points" aate hain; beech mein band karne par kuch nahi; withdraw balance nahi badhta</li>
+<li>Firestore console mein app se balance badalne ki koshish (ya rules playground) — <b>deny</b> honi chahiye</li>
+<li>KYC submit &gt; admin panel mein dikhe &gt; Verify &gt; app mein Verified</li>
+<li>Same PAN doosre account se — error</li>
+<li>₹50 se kam withdrawal blocked; UPI galat format blocked; ek pending ke rehte doosra blocked</li>
+<li>Withdrawal request par balance turant ghatta hai ("Withdrawal mein" dikhta hai)</li>
+<li>Admin Reject &gt; coins wapas + "Refund" history mein</li>
+<li>Admin Approve (RazorpayX TEST mode) &gt; webhook se status "paid"; test failure par coins refund</li>
+<li>Friend 2,000 task coins tak pahunche &gt; referrer +1,000, friend +500; uske baad 10% commission dikhe</li>
+<li>Dark mode, FAQ, Privacy/Terms links khulte hain; Logout; Account delete request</li>
+<li>Release AAB par OTP chalta hai (release + Play signing SHA keys Firebase mein daali hain)</li>
+<li>Firebase Console &gt; Functions &gt; Logs mein koi laal (error) entry nahi</li>
+<li>App Check (Play Integrity) register karke <code>ENFORCE_APP_CHECK = true</code> karke functions dobara deploy</li>
+</ul>
+
+<h2>11. Andazan kharcha (approximate — current rates website par check karein)</h2>
+<table>
+<tr><th>Item</th><th>Kharcha</th></tr>
+<tr><td>Google Play Console</td><td>$25 ek baar (~₹2,100–2,200)</td></tr>
+<tr><td>Firebase Blaze — Functions, Firestore, Hosting</td><td>Chhote app par aksar free quota ke andar ya kuch sau rupaye/mahina; users badhne par badhta hai. Budget alert zaroor.</td></tr>
+<tr><td>Phone OTP SMS (Firebase)</td><td>Per SMS charge; India ke liye kai sources ~$0.01/SMS batate hain (Google Cloud Identity Platform pricing page par current rate dekhein). 1,000 logins ≈ ₹850 ke aas-paas.</td></tr>
+<tr><td>RazorpayX payout fee</td><td>Published: UPI ₹1,000 se kam par ₹4 + 18% GST ≈ ₹4.72 per payout. ₹50 ke payout par yeh ~9% hai — isliye minimum ₹50 se kam na karein. Current account ki minimum balance shart alag.</td></tr>
+<tr><td>Users ko diye rewards</td><td>Sabse bada kharcha. Ise ad + offer kamai se kam rakhna hi business hai. Config se coins/limits kam-zyada kar sakte hain.</td></tr>
+<tr><td>Domain (optional)</td><td>~₹500–1,000/saal</td></tr>
+<tr><td>CA / legal salah</td><td>Aapke CA par nirbhar</td></tr>
+<tr><td>Developer (agar hire karein)</td><td>Experience aur kaam ke hisaab se alag-alag</td></tr>
+</table>
+<div class="note"><b>Seedha hisaab:</b> Har mahine admin panel mein dekhein — kul payout (withdrawals) + fees vs. AdMob + offerwall kamai. Payout kamai se zyada ho to coins kam karein ya limits ghataayein. Kisi bhi user ko kamai ka vaada na karein.</div>
+
+<h2>12. Aam problems aur hal</h2>
+<table>
+<tr><th>Problem</th><th>Hal</th></tr>
+<tr><td>OTP nahi aata / "app not authorized"</td><td>Firebase mein SHA-1 + SHA-256 (debug, release, Play app signing — teeno) daalein; nayi google-services.json download karke rakhein</td></tr>
+<tr><td>"The query requires an index"</td><td><code>firebase deploy --only firestore:indexes</code> chalayein aur 10 min rukein</td></tr>
+<tr><td>"PERMISSION_DENIED" app mein</td><td>Rules deploy hue? <code>firebase deploy --only firestore:rules</code></td></tr>
+<tr><td>Functions deploy fail: billing</td><td>Blaze plan active karein</td></tr>
+<tr><td>Video "available nahi"</td><td>Naye AdMob account/ad unit par ads aane mein samay lagta hai; test ads se check karein; internet</td></tr>
+<tr><td>Video dekha par points nahi aaye</td><td>AdMob ad unit mein SSV callback URL sahi hai? Functions logs mein <code>verifyRewardedAd</code> dekhein</td></tr>
+<tr><td>Payout "processing" mein atka</td><td>RazorpayX webhook URL/secret/events check karein; RazorpayX dashboard mein payout status dekhein</td></tr>
+<tr><td>Admin panel: "not an admin"</td><td><code>node scripts/setAdmin.js email</code> chalayein, phir logout/login</td></tr>
+<tr><td>Gradle/Kotlin build error</td><td>Android Studio updated rakhein; <code>flutter clean</code> phir <code>flutter pub get</code>; error message developer ko bhejein</td></tr>
+</table>
+
+<h2>13. Aage ke liye (optional)</h2>
+<ul>
+<li>Offerwall jodna: India support wala provider chunein, unka SDK lagayein, postback URL = <code>offerwallPostback</code>, aur <code>functions/src/offerwall.ts</code> unke format ke hisaab se badlein. Phir admin &gt; Tasks &gt; offerwall active = true.</li>
+<li>Automatic PAN verification API (manual KYC ki jagah).</li>
+<li>Weekly leaderboard reset, push notifications, Crashlytics.</li>
+</ul>
+<p class="small">Yeh guide technical setup ke liye hai; yeh legal ya tax salah nahi hai. Google, Razorpay aur Firebase ki policies aur prices badalti rehti hain — final faisle se pehle unki official websites check karein.</p>
+
+</body>
+</html>

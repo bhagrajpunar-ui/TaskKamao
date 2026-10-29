@@ -1,0 +1,23 @@
+{
+  "name": "taskkamao-functions",
+  "private": true,
+  "description": "TaskKamao server: all coin credits, withdrawals and payouts happen here.",
+  "main": "lib/index.js",
+  "engines": { "node": "20" },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "serve": "npm run build && firebase emulators:start",
+    "deploy": "firebase deploy --only functions",
+    "seed": "node scripts/seed.js",
+    "set-admin": "node scripts/setAdmin.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.10",
+    "typescript": "^5.7.2"
+  }
+}

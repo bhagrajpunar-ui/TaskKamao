@@ -1,0 +1,43 @@
+{
+  "config": {
+    "coinsPerRupee": 100,
+    "minWithdrawRupees": 50,
+    "maxWithdrawRupeesPerRequest": 500,
+    "withdrawalsPerDay": 1,
+    "minAccountAgeHours": 24,
+    "checkinCoins": 50,
+    "streakBonusEvery": 7,
+    "streakBonusCoins": 50,
+    "referrerBonusCoins": 1000,
+    "friendBonusCoins": 500,
+    "referralCommissionPercent": 10,
+    "referralQualifyTaskCoins": 2000,
+    "referralWindowHours": 48,
+    "maxDailyTaskCoins": 3000,
+    "payoutsEnabled": true,
+    "videoRewardWithdrawable": false
+  },
+  "tasks": {
+    "video":     { "title": "Video dekho",  "subtitle": "Video dekho, leaderboard points pao (withdraw nahi hote)", "type": "video",     "coins": 5,  "dailyLimit": 20, "active": true,  "order": 1 },
+    "quiz":      { "title": "Quiz khelo",   "subtitle": "Sahi jawab = coins",          "type": "quiz",      "coins": 2,  "dailyLimit": 15, "active": true,  "order": 2 },
+    "spin":      { "title": "Daily Spin",   "subtitle": "Din mein 1 baar",             "type": "spin",      "coins": 0,  "dailyLimit": 1,  "active": true,  "order": 3 },
+    "scratch":   { "title": "Scratch Card", "subtitle": "Din mein 3 card",             "type": "scratch",   "coins": 0,  "dailyLimit": 3,  "active": true,  "order": 4 },
+    "offerwall": { "title": "Offers",       "subtitle": "Partner offers (jald aa raha hai)", "type": "offerwall", "coins": 0, "dailyLimit": 50, "active": false, "order": 5 },
+    "read_tips": { "title": "Aaj ka tip padho", "subtitle": "30 second padho", "type": "visit", "coins": 3, "dailyLimit": 1, "active": true, "order": 6,
+                   "url": "https://example.com/tips", "minSeconds": 30 }
+  },
+  "quiz": [
+    { "id": "q001", "question": "Rajasthan ki rajdhani kaunsi hai?", "options": ["Jodhpur", "Jaipur", "Udaipur", "Ajmer"], "correctIndex": 1, "category": "GK" },
+    { "id": "q002", "question": "Hawa Mahal kis shehar mein hai?", "options": ["Jaipur", "Delhi", "Agra", "Bikaner"], "correctIndex": 0, "category": "GK" },
+    { "id": "q003", "question": "Bharat ka rashtriya pakshi kaunsa hai?", "options": ["Tota", "Kabootar", "Mor", "Garud"], "correctIndex": 2, "category": "GK" },
+    { "id": "q004", "question": "1 saal mein kitne mahine hote hain?", "options": ["10", "11", "12", "13"], "correctIndex": 2, "category": "Basic" },
+    { "id": "q005", "question": "UPI ka full form kya hai?", "options": ["Unified Payments Interface", "United Pay India", "Universal Payment ID", "Union Payment Interface"], "correctIndex": 0, "category": "Finance" },
+    { "id": "q006", "question": "Bharat ki sabse lambi nadi kaunsi hai?", "options": ["Yamuna", "Ganga", "Godavari", "Narmada"], "correctIndex": 1, "category": "GK" },
+    { "id": "q007", "question": "12 x 12 kitna hota hai?", "options": ["124", "142", "144", "132"], "correctIndex": 2, "category": "Maths" },
+    { "id": "q008", "question": "Thar registan kis rajya mein mukhya roop se hai?", "options": ["Gujarat", "Punjab", "Rajasthan", "Haryana"], "correctIndex": 2, "category": "GK" },
+    { "id": "q009", "question": "Cricket team mein kitne khiladi khelte hain?", "options": ["9", "10", "11", "12"], "correctIndex": 2, "category": "Sports" },
+    { "id": "q010", "question": "RBI ka headquarter kahan hai?", "options": ["Delhi", "Mumbai", "Kolkata", "Chennai"], "correctIndex": 1, "category": "Finance" },
+    { "id": "q011", "question": "Paani ka chemical formula kya hai?", "options": ["CO2", "H2O", "O2", "NaCl"], "correctIndex": 1, "category": "Science" },
+    { "id": "q012", "question": "Amer Fort kis shehar ke paas hai?", "options": ["Jaipur", "Kota", "Alwar", "Pushkar"], "correctIndex": 0, "category": "GK" }
+  ]
+}

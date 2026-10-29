@@ -1,0 +1,12 @@
+# secrets - never commit
+**/serviceAccount*.json
+**/google-services.json
+functions/.env*
+**/key.properties
+**/*.jks
+**/*.keystore
+# build
+functions/node_modules/
+functions/lib/
+app/build/
+app/.dart_tool/

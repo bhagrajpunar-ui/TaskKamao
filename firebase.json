@@ -1,0 +1,21 @@
+{
+  "firestore": { "rules": "firestore.rules", "indexes": "firestore.indexes.json" },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "runtime": "nodejs20",
+      "ignore": ["node_modules", ".git", "scripts", "serviceAccount*.json", "*.log"],
+      "predeploy": ["npm --prefix \"$RESOURCE_DIR\" run build"]
+    }
+  ],
+  "hosting": {
+    "public": "admin",
+    "ignore": ["firebase.json", "**/.*"],
+    "headers": [ { "source": "**", "headers": [ { "key": "X-Robots-Tag", "value": "noindex" } ] } ]
+  },
+  "emulators": {
+    "auth": { "port": 9099 }, "functions": { "port": 5001 }, "firestore": { "port": 8080 },
+    "hosting": { "port": 5000 }, "ui": { "enabled": true }
+  }
+}

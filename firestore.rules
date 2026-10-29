@@ -1,0 +1,47 @@
+rules_version = '2';
+
+// TaskKamao Firestore rules.
+// Golden rule: the app can READ its own data but can NEVER write balances, coins,
+// transactions, withdrawals or referrals. Every write of money-like data happens in Cloud Functions
+// (Admin SDK bypasses these rules).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function ownsDoc() { return signedIn() && resource.data.uid == request.auth.uid; }
+
+    // Default: admins may read everything; nobody writes unless a rule below allows it.
+    match /{document=**} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if false; // profile changes go through updateProfile / submitKyc functions
+
+      match /daily/{day} { allow read: if isOwner(uid); }
+      match /quizAnswered/{qid} { allow read: if isOwner(uid); }
+      // /users/{uid}/private/* (full PAN) -> admin only, covered by the default rule
+    }
+
+    match /transactions/{id} { allow read: if ownsDoc(); }
+    match /withdrawals/{id}  { allow read: if ownsDoc(); }
+    match /adSessions/{id}   { allow read: if ownsDoc(); }
+
+    match /referrals/{friendUid} {
+      allow read: if signedIn() &&
+        (resource.data.referrerUid == request.auth.uid || resource.data.friendUid == request.auth.uid);
+    }
+
+    match /leaderboard/{uid} { allow read: if signedIn(); }
+
+    // Content managed from the admin panel
+    match /config/{id}          { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /tasks/{id}           { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /quizQuestions/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
+    match /quizAnswers/{id}     { allow write: if isAdmin(); } // read: admin only (default rule)
+  }
+}

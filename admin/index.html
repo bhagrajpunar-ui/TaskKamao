@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>TaskKamao Admin</title>
+<style>
+  :root { --p:#e67e00; --bg:#f6f6f6; --b:#ddd; }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; background: var(--bg); color:#222; }
+  header { background: var(--p); color: #fff; padding: 12px 20px; display:flex; align-items:center; gap:16px; }
+  header h1 { font-size: 18px; margin: 0; flex: 1; }
+  nav button { background: transparent; color:#fff; border:1px solid #fff8; margin-right:6px; }
+  nav button.active { background:#fff; color: var(--p); }
+  main { padding: 20px; max-width: 1200px; margin: auto; }
+  section { display:none; } section.active { display:block; }
+  .card { background:#fff; border:1px solid var(--b); border-radius:8px; padding:16px; margin-bottom:16px; }
+  table { width:100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid var(--b); vertical-align: top; }
+  button { background: var(--p); color:#fff; border:0; padding:6px 12px; border-radius:6px; cursor:pointer; font-size: 13px; }
+  button.secondary { background:#666; } button.danger { background:#c0392b; }
+  button:disabled { opacity:.5; cursor: default; }
+  input, select, textarea { padding:6px 8px; border:1px solid var(--b); border-radius:6px; font: inherit; }
+  label { display:block; margin:8px 0 4px; font-size: 13px; color:#555; }
+  .row { display:flex; gap:12px; flex-wrap: wrap; } .row > div { flex: 1; min-width: 160px; }
+  .muted { color:#777; font-size: 12px; } .flag { color:#c0392b; font-weight:600; }
+  #login { max-width: 360px; margin: 80px auto; }
+  .hidden { display:none !important; }
+  #toast { position: fixed; bottom: 20px; right: 20px; background:#222; color:#fff; padding:10px 16px; border-radius:6px; display:none; }
+</style>
+</head>
+<body>
+<header>
+  <h1>TaskKamao Admin</h1>
+  <nav id="nav" class="hidden">
+    <button data-tab="withdrawals" class="active">Withdrawals</button>
+    <button data-tab="kyc">KYC</button>
+    <button data-tab="users">Users</button>
+    <button data-tab="tasks">Tasks</button>
+    <button data-tab="quiz">Quiz</button>
+    <button data-tab="config">Config</button>
+    <button id="logout">Logout</button>
+  </nav>
+</header>
+
+<div id="login" class="card">
+  <h3>Admin login</h3>
+  <p class="muted">Email/password user with the <b>admin</b> claim (see README: setAdmin.js).</p>
+  <label>Email</label><input id="email" type="email" style="width:100%" />
+  <label>Password</label><input id="password" type="password" style="width:100%" />
+  <p><button id="loginBtn">Login</button></p>
+  <p id="loginErr" class="flag"></p>
+</div>
+
+<main id="app" class="hidden">
+  <section id="withdrawals" class="active">
+    <div class="card">
+      <h3>Pending / processing withdrawals <button class="secondary" onclick="loadWithdrawals()">Refresh</button></h3>
+      <p class="muted">Approve sends a real UPI payout via RazorpayX. Check KYC name, risk flags and the user's history first.</p>
+      <table><thead><tr><th>Date</th><th>User</th><th>UPI</th><th>Amount</th><th>Status</th><th>Flags</th><th></th></tr></thead><tbody id="wBody"></tbody></table>
+    </div>
+    <div class="card">
+      <h3>Recent (all statuses)</h3>
+      <table><thead><tr><th>Date</th><th>User</th><th>UPI</th><th>Amount</th><th>Status</th><th>Payout / UTR</th></tr></thead><tbody id="wAllBody"></tbody></table>
+    </div>
+  </section>
+
+  <section id="kyc">
+    <div class="card">
+      <h3>Pending KYC <button class="secondary" onclick="loadKyc()">Refresh</button></h3>
+      <p class="muted">Verify the PAN and name (e.g. with a PAN verification service) before approving.</p>
+      <table><thead><tr><th>User</th><th>Name on PAN</th><th>PAN</th><th>Submitted</th><th></th></tr></thead><tbody id="kycBody"></tbody></table>
+    </div>
+  </section>
+
+  <section id="users">
+    <div class="card">
+      <h3>Users</h3>
+      <div class="row"><div><input id="phoneSearch" placeholder="+919876543210" /> <button onclick="searchUser()">Search phone</button> <button class="secondary" onclick="loadUsers()">Latest 50</button></div></div>
+      <table><thead><tr><th>Joined</th><th>Name / Phone</th><th>Balance</th><th>Earned</th><th>KYC</th><th>Status</th><th></th></tr></thead><tbody id="uBody"></tbody></table>
+    </div>
+  </section>
+
+  <section id="tasks">
+    <div class="card">
+      <h3>Add / edit task</h3>
+      <p class="muted">Built-in ids: video, quiz, spin, scratch, offerwall (keep these ids). Custom tasks use type "visit".</p>
+      <div class="row">
+        <div><label>Task id</label><input id="tId" placeholder="read_tips" /></div>
+        <div><label>Title</label><input id="tTitle" /></div>
+        <div><label>Subtitle</label><input id="tSub" /></div>
+        <div><label>Type</label><select id="tType"><option>visit</option><option>video</option><option>quiz</option><option>spin</option><option>scratch</option><option>offerwall</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Coins per completion</label><input id="tCoins" type="number" value="3" /></div>
+        <div><label>Daily limit</label><input id="tLimit" type="number" value="1" /></div>
+        <div><label>Order</label><input id="tOrder" type="number" value="10" /></div>
+        <div><label>Active</label><select id="tActive"><option value="true">true</option><option value="false">false</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>URL (visit tasks)</label><input id="tUrl" style="width:100%" /></div>
+        <div><label>Min seconds (visit tasks)</label><input id="tSec" type="number" value="30" /></div>
+      </div>
+      <p><button onclick="saveTask()">Save task</button></p>
+    </div>
+    <div class="card"><h3>All tasks</h3>
+      <table><thead><tr><th>Id</th><th>Title</th><th>Type</th><th>Coins</th><th>Limit</th><th>Active</th><th></th></tr></thead><tbody id="tBody"></tbody></table>
+    </div>
+  </section>
+
+  <section id="quiz">
+    <div class="card">
+      <h3>Add quiz question</h3>
+      <label>Question</label><input id="qText" style="width:100%" />
+      <div class="row">
+        <div><label>Option A</label><input id="qA" /></div><div><label>Option B</label><input id="qB" /></div>
+        <div><label>Option C</label><input id="qC" /></div><div><label>Option D</label><input id="qD" /></div>
+      </div>
+      <div class="row">
+        <div><label>Correct option</label><select id="qCorrect"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></div>
+        <div><label>Coins</label><input id="qCoins" type="number" value="2" /></div>
+        <div><label>Category</label><input id="qCat" value="GK" /></div>
+      </div>
+      <p><button onclick="addQuestion()">Add question</button></p>
+    </div>
+    <div class="card"><h3>Latest questions</h3>
+      <table><thead><tr><th>Question</th><th>Options</th><th>Active</th><th></th></tr></thead><tbody id="qBody"></tbody></table>
+    </div>
+  </section>
+
+  <section id="config">
+    <div class="card">
+      <h3>App config (config/app)</h3>
+      <p class="muted">JSON. Server caches for up to 5 minutes. Set payoutsEnabled=false to pause withdrawals.</p>
+      <textarea id="cfg" rows="20" style="width:100%; font-family: monospace"></textarea>
+      <p><button onclick="saveConfig()">Save config</button></p>
+    </div>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  import { getFirestore, collection, query, where, orderBy, limit, getDocs, getDoc, doc, setDoc, updateDoc, writeBatch, serverTimestamp }
+    from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+  import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-functions.js";
+
+  // TODO: Firebase Console > Project settings > General > Your apps > Add app > Web (</>) > copy this config.
+  // These web keys are not secret (security comes from Auth + Firestore rules + admin claim).
+  const firebaseConfig = {
+    apiKey: "TODO",
+    authDomain: "TODO.firebaseapp.com",
+    projectId: "TODO",
+    storageBucket: "TODO.appspot.com",
+    messagingSenderId: "TODO",
+    appId: "TODO",
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const fns = getFunctions(app, "asia-south1");
+  const call = (name, data) => httpsCallable(fns, name)(data).then(r => r.data);
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmt = (ts) => ts?.toDate ? ts.toDate().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "";
+  const rs = (n) => "\u20B9" + Number(n || 0).toLocaleString("en-IN");
+  const toast = (m) => { const t = $("toast"); t.textContent = m; t.style.display = "block"; setTimeout(() => t.style.display = "none", 3500); };
+  const guard = async (btn, fn) => { btn && (btn.disabled = true); try { await fn(); } catch (e) { alert(e.message || e); } finally { btn && (btn.disabled = false); } };
+
+  // ---------- auth ----------
+  $("loginBtn").onclick = () => guard($("loginBtn"), async () => {
+    $("loginErr").textContent = "";
+    try { await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value); }
+    catch (e) { $("loginErr").textContent = e.message; }
+  });
+  $("logout").onclick = () => signOut(auth);
+
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) { $("login").classList.remove("hidden"); $("app").classList.add("hidden"); $("nav").classList.add("hidden"); return; }
+    const token = await user.getIdTokenResult(true);
+    if (token.claims.admin !== true) { $("loginErr").textContent = "This account is not an admin."; await signOut(auth); return; }
+    $("login").classList.add("hidden"); $("app").classList.remove("hidden"); $("nav").classList.remove("hidden");
+    loadWithdrawals();
+  });
+
+  document.querySelectorAll("#nav button[data-tab]").forEach(b => b.onclick = () => {
+    document.querySelectorAll("#nav button[data-tab]").forEach(x => x.classList.toggle("active", x === b));
+    document.querySelectorAll("main section").forEach(s => s.classList.toggle("active", s.id === b.dataset.tab));
+    ({ withdrawals: loadWithdrawals, kyc: loadKyc, users: loadUsers, tasks: loadTasks, quiz: loadQuiz, config: loadConfig })[b.dataset.tab]();
+  });
+
+  // ---------- withdrawals ----------
+  window.loadWithdrawals = async () => {
+    const q = query(collection(db, "withdrawals"), where("status", "in", ["pending", "processing"]), orderBy("createdAt", "asc"), limit(100));
+    const snap = await getDocs(q);
+    $("wBody").innerHTML = snap.docs.map(d => { const w = d.data(); return `<tr>
+      <td>${fmt(w.createdAt)}</td><td>${esc(w.name)}<br><span class="muted">${esc(w.phone)}<br>${esc(w.uid)}</span></td>
+      <td>${esc(w.upiId)}</td><td>${rs(w.amountRupees)}<br><span class="muted">${w.coins} coins</span></td>
+      <td>${esc(w.status)}${w.lastError ? `<br><span class="flag">${esc(w.lastError)}</span>` : ""}${w.payoutId ? `<br><span class="muted">${esc(w.payoutId)}</span>` : ""}</td>
+      <td class="flag">${esc((w.riskFlags || []).join(", "))}</td>
+      <td>${w.payoutId ? '<span class="muted">waiting for webhook</span>' :
+        `<button onclick="approveW('${d.id}', this)">Approve & pay</button> <button class="danger" onclick="rejectW('${d.id}', this)">Reject</button>`}</td></tr>`; }).join("")
+      || '<tr><td colspan="7" class="muted">Nothing pending</td></tr>';
+    const all = await getDocs(query(collection(db, "withdrawals"), orderBy("createdAt", "desc"), limit(50)));
+    $("wAllBody").innerHTML = all.docs.map(d => { const w = d.data(); return `<tr><td>${fmt(w.createdAt)}</td><td>${esc(w.name)}<br><span class="muted">${esc(w.phone)}</span></td>
+      <td>${esc(w.upiId)}</td><td>${rs(w.amountRupees)}</td><td>${esc(w.status)}${w.failureReason ? `<br><span class="muted">${esc(w.failureReason)}</span>` : ""}</td>
+      <td class="muted">${esc(w.payoutId || "")}<br>${esc(w.utr || "")}</td></tr>`; }).join("");
+  };
+  window.approveW = (id, btn) => guard(btn, async () => {
+    if (!confirm("Send real UPI payout for this withdrawal?")) return;
+    const r = await call("adminApproveWithdrawal", { withdrawalId: id });
+    toast("Payout created: " + r.payoutId + " (" + r.status + ")"); loadWithdrawals();
+  });
+  window.rejectW = (id, btn) => guard(btn, async () => {
+    const reason = prompt("Reason (user will see it):", "Details verify nahi hue");
+    if (!reason) return;
+    await call("adminRejectWithdrawal", { withdrawalId: id, reason }); toast("Rejected and refunded"); loadWithdrawals();
+  });
+
+  // ---------- KYC ----------
+  window.loadKyc = async () => {
+    const snap = await getDocs(query(collection(db, "users"), where("kycStatus", "==", "pending"), orderBy("createdAt", "desc"), limit(100)));
+    const rows = await Promise.all(snap.docs.map(async d => {
+      const u = d.data(); const k = (await getDoc(doc(db, `users/${d.id}/private/kyc`))).data() || {};
+      return `<tr><td>${esc(u.name)}<br><span class="muted">${esc(u.phone)}</span></td><td>${esc(k.name)}</td><td>${esc(k.pan)}</td><td>${fmt(k.submittedAt)}</td>
+        <td><button onclick="kyc('${d.id}', true, this)">Verify</button> <button class="danger" onclick="kyc('${d.id}', false, this)">Reject</button></td></tr>`;
+    }));
+    $("kycBody").innerHTML = rows.join("") || '<tr><td colspan="5" class="muted">No pending KYC</td></tr>';
+  };
+  window.kyc = (uid, approve, btn) => guard(btn, async () => {
+    const reason = approve ? null : prompt("Reject reason:", "PAN aur naam match nahi hue");
+    if (!approve && !reason) return;
+    await call("adminVerifyKyc", { uid, approve, reason }); toast(approve ? "KYC verified" : "KYC rejected"); loadKyc();
+  });
+
+  // ---------- users ----------
+  const userRows = (docs) => docs.map(d => { const u = d.data(); return `<tr><td>${fmt(u.createdAt)}</td>
+    <td>${esc(u.name)}<br><span class="muted">${esc(u.phone)} | ${esc(d.id)}<br>code ${esc(u.referralCode)}${u.referredBy ? " | referred" : ""}</span></td>
+    <td>${u.balance} <span class="muted">(${rs((u.balance || 0) / 100)})</span>${u.lockedCoins ? `<br><span class="muted">locked ${u.lockedCoins}</span>` : ""}</td>
+    <td>${u.totalEarned}<br><span class="muted">task ${u.taskEarned}</span></td><td>${esc(u.kycStatus)}</td>
+    <td class="${u.status !== "active" ? "flag" : ""}">${esc(u.status)}${u.blockReason ? `<br><span class="muted">${esc(u.blockReason)}</span>` : ""}${(u.deviceChanges || 0) > 0 ? `<br><span class="muted">device changes ${u.deviceChanges}</span>` : ""}</td>
+    <td>${u.status === "active" ? `<button class="danger" onclick="setStatus('${d.id}','blocked',this)">Block</button>` : `<button onclick="setStatus('${d.id}','active',this)">Unblock</button>`}</td></tr>`; }).join("")
+    || '<tr><td colspan="7" class="muted">No users</td></tr>';
+  window.loadUsers = async () => { $("uBody").innerHTML = userRows((await getDocs(query(collection(db, "users"), orderBy("createdAt", "desc"), limit(50)))).docs); };
+  window.searchUser = async () => { $("uBody").innerHTML = userRows((await getDocs(query(collection(db, "users"), where("phone", "==", $("phoneSearch").value.trim())))).docs); };
+  window.setStatus = (uid, status, btn) => guard(btn, async () => {
+    const reason = status === "blocked" ? prompt("Block reason:", "fraud_suspected") : null;
+    if (status === "blocked" && !reason) return;
+    await call("adminSetUserStatus", { uid, status, reason }); toast("Updated"); loadUsers();
+  });
+
+  // ---------- tasks ----------
+  window.loadTasks = async () => {
+    const snap = await getDocs(query(collection(db, "tasks"), orderBy("order")));
+    window._tasks = Object.fromEntries(snap.docs.map(d => [d.id, { id: d.id, ...d.data() }]));
+    $("tBody").innerHTML = snap.docs.map(d => { const t = d.data(); return `<tr><td>${esc(d.id)}</td><td>${esc(t.title)}</td><td>${esc(t.type)}</td>
+      <td>${t.coins}</td><td>${t.dailyLimit}</td><td>${t.active}</td><td><button class="secondary" onclick="editTask('${esc(d.id)}')">Edit</button></td></tr>`; }).join("");
+  };
+  window.editTask = (id) => { const t = window._tasks[id];
+    $("tId").value = t.id; $("tTitle").value = t.title || ""; $("tSub").value = t.subtitle || ""; $("tType").value = t.type || "visit";
+    $("tCoins").value = t.coins ?? 0; $("tLimit").value = t.dailyLimit ?? 1; $("tOrder").value = t.order ?? 10; $("tActive").value = String(t.active !== false);
+    $("tUrl").value = t.url || ""; $("tSec").value = t.minSeconds ?? 30; window.scrollTo(0, 0); };
+  window.saveTask = () => guard(null, async () => {
+    const id = $("tId").value.trim(); if (!/^[a-z0-9_]{2,40}$/.test(id)) return alert("Task id: lowercase letters, numbers, _");
+    const coins = parseInt($("tCoins").value, 10), dailyLimit = parseInt($("tLimit").value, 10);
+    if (!(coins >= 0 && coins <= 1000) || !(dailyLimit >= 0 && dailyLimit <= 500)) return alert("Check coins/limit");
+    const data = { title: $("tTitle").value.trim(), subtitle: $("tSub").value.trim(), type: $("tType").value, coins, dailyLimit,
+      order: parseInt($("tOrder").value, 10) || 0, active: $("tActive").value === "true" };
+    if (data.type === "visit") { data.url = $("tUrl").value.trim(); data.minSeconds = parseInt($("tSec").value, 10) || 30; }
+    await setDoc(doc(db, "tasks", id), data, { merge: true }); toast("Task saved"); loadTasks();
+  });
+
+  // ---------- quiz ----------
+  window.loadQuiz = async () => {
+    const snap = await getDocs(query(collection(db, "quizQuestions"), orderBy("createdAt", "desc"), limit(30)));
+    $("qBody").innerHTML = snap.docs.map(d => { const q = d.data(); return `<tr><td>${esc(q.question)}</td><td class="muted">${esc((q.options || []).join(" | "))}</td>
+      <td>${q.active}</td><td><button class="secondary" onclick="toggleQ('${d.id}', ${!q.active})">${q.active ? "Deactivate" : "Activate"}</button></td></tr>`; }).join("");
+  };
+  window.addQuestion = () => guard(null, async () => {
+    const options = [$("qA"), $("qB"), $("qC"), $("qD")].map(i => i.value.trim()).filter(Boolean);
+    const question = $("qText").value.trim();
+    const correctIndex = parseInt($("qCorrect").value, 10);
+    if (!question || options.length < 2 || correctIndex >= options.length) return alert("Question, at least 2 options and a valid correct option needed");
+    const ref = doc(collection(db, "quizQuestions"));
+    const b = writeBatch(db);
+    b.set(ref, { question, options, coins: parseInt($("qCoins").value, 10) || 2, category: $("qCat").value.trim(), active: true, createdAt: serverTimestamp() });
+    b.set(doc(db, "quizAnswers", ref.id), { correctIndex });
+    await b.commit();
+    ["qText", "qA", "qB", "qC", "qD"].forEach(i => $(i).value = ""); toast("Question added"); loadQuiz();
+  });
+  window.toggleQ = (id, active) => guard(null, async () => { await updateDoc(doc(db, "quizQuestions", id), { active }); loadQuiz(); });
+
+  // ---------- config ----------
+  window.loadConfig = async () => { $("cfg").value = JSON.stringify((await getDoc(doc(db, "config/app"))).data() || {}, null, 2); };
+  window.saveConfig = () => guard(null, async () => {
+    let data; try { data = JSON.parse($("cfg").value); } catch { return alert("Invalid JSON"); }
+    await setDoc(doc(db, "config/app"), data); toast("Config saved");
+  });
+</script>
+</body>
+</html>
