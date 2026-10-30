@@ -23,18 +23,18 @@ async function boot() {
     tabsEl.classList.add("hidden");
     if (!u) return renderLogin();
     view.innerHTML = `<div class="spin"></div>`;
-    let ok = false;
+    let ok = false, why = "";
     try {
       const tok = await u.getIdTokenResult();
       ok = tok.claims.admin === true;
       if (!ok) ok = (await S.fb.F.getDoc(S.fb.F.doc(S.fb.db, "admins", u.uid))).exists();
-    } catch { ok = false; }
+    } catch (e) { ok = false; why = errMsg(e); }
     if (!ok) {
       view.innerHTML = `<div class="card"><h2>⛔ Aap admin nahi hain</h2>
         <p>Admin banne ke liye Firebase Console &gt; Firestore mein collection <code>admins</code> banayein aur Document ID mein yeh UID daalein:</p>
         <p><code id="myUid" style="user-select:all;font-size:18px">${esc(u.uid)}</code></p>
         <p><button id="copyUid" class="btn" style="font-size:18px;padding:12px 20px">📋 UID Copy karein</button></p>
-        <p class="muted">(Ek field bhi daal dein, jaise <code>role = "owner"</code>.) Phir yeh page refresh karein.</p></div>`;
+        <p class="muted">(Ek field bhi daal dein, jaise <code>role = "owner"</code>.) Phir yeh page refresh karein.</p>${why ? `<p class="banner bad">Error: ${esc(why)}</p>` : `<p class="muted">Check: admins/${esc(u.uid)} document nahi mila.</p>`}</div>`;
       const cb = document.getElementById("copyUid");
       if (cb) cb.onclick = async () => {
         try { await navigator.clipboard.writeText(u.uid); cb.textContent = "✅ Copy ho gaya!"; }
