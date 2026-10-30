@@ -32,8 +32,15 @@ async function boot() {
     if (!ok) {
       view.innerHTML = `<div class="card"><h2>⛔ Aap admin nahi hain</h2>
         <p>Admin banne ke liye Firebase Console &gt; Firestore mein collection <code>admins</code> banayein aur Document ID mein yeh UID daalein:</p>
-        <p><code style="user-select:all">${esc(u.uid)}</code></p>
+        <p><code id="myUid" style="user-select:all;font-size:18px">${esc(u.uid)}</code></p>
+        <p><button id="copyUid" class="btn" style="font-size:18px;padding:12px 20px">📋 UID Copy karein</button></p>
         <p class="muted">(Ek field bhi daal dein, jaise <code>role = "owner"</code>.) Phir yeh page refresh karein.</p></div>`;
+      const cb = document.getElementById("copyUid");
+      if (cb) cb.onclick = async () => {
+        try { await navigator.clipboard.writeText(u.uid); cb.textContent = "✅ Copy ho gaya!"; }
+        catch { const r = document.createRange(); r.selectNodeContents(document.getElementById("myUid"));
+                const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); document.execCommand("copy"); cb.textContent = "✅ Copy ho gaya!"; }
+      };
       return;
     }
     S.settings = await loadSettings(S.fb.db, S.fb.F);
