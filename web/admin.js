@@ -146,12 +146,30 @@ async function approveSub(id, btn) {
       const uSnap = await t.get(uRef);
       if (!uSnap.exists()) throw new Error("User profile nahi mila.");
       const reward = Number(s.reward) || 0;
+      const u = uSnap.data();
+      // Referral bonus: once, when the referred user's first task gets approved.
+      const bonus = Number(S.settings.referralBonusCoins) || 0;
+      let rRef = null;
+      if (bonus > 0 && u.referredBy && u.referredBy !== s.uid && !u.referralBonusPaid) {
+        const ref = F.doc(db, "users", u.referredBy);
+        const rSnap = await t.get(ref);
+        if (rSnap.exists() && (rSnap.data().status || "active") === "active") rRef = ref;
+      }
       t.update(sRef, { status: "approved", reviewedAt: F.serverTimestamp(), reviewedBy: S.user.uid });
       t.update(uRef, { balance: F.increment(reward), totalEarned: F.increment(reward), taskEarned: F.increment(reward) });
       t.set(F.doc(F.collection(db, "transactions")), {
         uid: s.uid, coins: reward, kind: "task", category: "earn", title: s.taskTitle || "Task",
         status: "success", meta: { submissionId: id, source: "web" }, createdAt: F.serverTimestamp(),
       });
+      if (rRef) {
+        t.update(uRef, { referralBonusPaid: true });
+        t.update(rRef, { balance: F.increment(bonus), totalEarned: F.increment(bonus),
+          referralEarned: F.increment(bonus), referralCount: F.increment(1) });
+        t.set(F.doc(F.collection(db, "transactions")), {
+          uid: rRef.id, coins: bonus, kind: "referral", category: "earn", title: "Referral bonus",
+          status: "success", meta: { friendUid: s.uid, submissionId: id, source: "web" }, createdAt: F.serverTimestamp(),
+        });
+      }
     });
     toast("Approved ✅ coins credit ho gaye");
     drawTab();
@@ -360,6 +378,7 @@ async function tabSettings() {
         <div><label>Coins per ₹1</label><input name="coinsPerRupee" type="number" min="1" step="1" required value="${esc(s.coinsPerRupee)}" /></div>
         <div><label>Minimum withdrawal (₹)</label><input name="minWithdrawRupees" type="number" min="1" step="1" required value="${esc(s.minWithdrawRupees)}" /></div>
         <div><label>Maximum per request (₹)</label><input name="maxWithdrawRupeesPerRequest" type="number" min="1" step="1" required value="${esc(s.maxWithdrawRupeesPerRequest)}" /></div>
+        <div><label>Referral bonus (coins, 0 = band)</label><input name="referralBonusCoins" type="number" min="0" step="1" required value="${esc(s.referralBonusCoins ?? 0)}" /></div>
       </div>
       <label class="chk"><input type="checkbox" name="requireKycForWithdraw" ${s.requireKycForWithdraw !== false ? "checked" : ""} /> Withdrawal ke liye KYC verified zaroori</label>
       <button class="block" type="submit">Save settings</button>
@@ -373,7 +392,10 @@ async function tabSettings() {
       maxWithdrawRupeesPerRequest: Number(form.maxWithdrawRupeesPerRequest.value),
       requireKycForWithdraw: form.requireKycForWithdraw.checked,
     };
+    const referralBonusCoins = Number(form.referralBonusCoins.value);
     if (Object.values(data).some((v) => typeof v === "number" && (!Number.isInteger(v) || v < 1))) return toast("Sab numbers poore aur 1+ hon.", true);
+    if (!Number.isInteger(referralBonusCoins) || referralBonusCoins < 0) return toast("Referral bonus 0 ya usse zyada poora number ho.", true);
+    data.referralBonusCoins = referralBonusCoins;
     if (data.minWithdrawRupees > data.maxWithdrawRupeesPerRequest) return toast("Minimum, maximum se zyada nahi ho sakta.", true);
     try {
       await S.fb.F.setDoc(S.fb.F.doc(S.fb.db, "config", "app"), data, { merge: true });

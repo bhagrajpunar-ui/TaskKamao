@@ -26,4 +26,5 @@ export const defaultSettings = {
   minWithdrawRupees: 50,       // minimum withdrawal ₹50
   maxWithdrawRupeesPerRequest: 500,
   requireKycForWithdraw: true, // withdrawal se pehle KYC verified hona zaroori
+  referralBonusCoins: 500,     // dost ka pehla task approve hone par referrer ko (0 = band)
 };

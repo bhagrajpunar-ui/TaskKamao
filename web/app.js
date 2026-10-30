@@ -83,12 +83,24 @@ async function boot() {
   });
 }
 
+// Referral link: ?ref=<uid> is remembered until this browser signs up.
+(function captureRef() {
+  try {
+    const r = new URLSearchParams(location.search).get("ref");
+    if (r && /^[A-Za-z0-9_-]{6,128}$/.test(r)) localStorage.setItem("tk_ref", r);
+  } catch {}
+})();
+
+function referralLink() {
+  return location.origin + location.pathname + "?ref=" + encodeURIComponent(S.user.uid);
+}
+
 async function ensureProfile(u) {
   const { db, F } = S.fb;
   const ref = F.doc(db, "users", u.uid);
   const snap = await F.getDoc(ref);
   if (snap.exists()) return;
-  await F.setDoc(ref, {
+  const data = {
     uid: u.uid,
     name: (S.pendingName || u.displayName || (u.email || "").split("@")[0] || "TaskKamao User").slice(0, 60),
     email: u.email || "",
@@ -102,7 +114,18 @@ async function ensureProfile(u) {
     status: "active",
     source: "web",
     createdAt: F.serverTimestamp(),
-  });
+  };
+  let refUid = "";
+  try { refUid = localStorage.getItem("tk_ref") || ""; } catch {}
+  if (refUid && refUid !== u.uid) {
+    try {
+      await F.setDoc(ref, { ...data, referredBy: refUid });
+      try { localStorage.removeItem("tk_ref"); } catch {}
+      return;
+    } catch { /* invalid referrer: sign up without it */ }
+  }
+  await F.setDoc(ref, data);
+  try { localStorage.removeItem("tk_ref"); } catch {}
 }
 
 async function checkAdmin(uid) {
@@ -275,7 +298,9 @@ async function renderDashboard() {
       <a class="btn block" href="#/tasks">Tasks dekho →</a>
       <a class="btn ghost block" href="#/wallet">Withdraw karo</a>
     </div>
+    ${referCard(p)}
     <p class="center links"><a href="#/terms">Terms</a>${S.isAdmin ? `<a href="admin.html">Admin panel</a>` : ""}</p>`;
+  bindRefer();
   try {
     const subs = await mySubmissions();
     const el1 = document.getElementById("stPending"), el2 = document.getElementById("stApproved");
@@ -284,6 +309,34 @@ async function renderDashboard() {
   } catch (e) {
     ["stPending", "stApproved"].forEach((id) => { const el = document.getElementById(id); if (el) el.textContent = "–"; });
   }
+}
+
+// ---------------------------------------------------------------- refer & earn
+function referCard(p) {
+  const bonus = Number(S.settings.referralBonusCoins) || 0;
+  if (bonus <= 0) return "";
+  const link = referralLink();
+  return `<div class="card">
+    <div class="row"><h3>🎁 Refer &amp; Earn</h3><span class="coin">+${fmtCoins(bonus)}</span></div>
+    <p class="muted">Dost ko apna link bhejo. Jab woh join karke apna pehla task poora karega aur admin approve karega, aapko ${fmtCoins(bonus)} coins (≈ ${rupees(bonus, S.settings)}) milenge.</p>
+    <input id="refLink" value="${esc(link)}" readonly onclick="this.select()" />
+    <div class="actions" style="margin-top:8px">
+      <button type="button" id="refCopy">📋 Link copy karo</button>
+      <a class="btn ghost" id="refWa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent("TaskKamao pe chhote tasks karo aur UPI pe paise pao. Mere link se join karo: " + link)}">WhatsApp pe bhejo</a>
+    </div>
+    <p class="muted">Aapke dost jo kamaane lage: ${esc(p.referralCount || 0)} · Referral se kamai: ${fmtCoins(p.referralEarned || 0)} coins</p>
+  </div>`;
+}
+
+function bindRefer() {
+  const b = document.getElementById("refCopy");
+  if (!b) return;
+  b.onclick = async () => {
+    const inp = document.getElementById("refLink");
+    try { await navigator.clipboard.writeText(inp.value); }
+    catch { inp.select(); document.execCommand("copy"); }
+    b.textContent = "✅ Copy ho gaya!";
+  };
 }
 
 // ---------------------------------------------------------------- tasks

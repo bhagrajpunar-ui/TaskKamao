@@ -70,12 +70,15 @@ service cloud.firestore {
     function validNewUser(uid) {
       let d = request.resource.data;
       return d.keys().hasOnly(['uid', 'name', 'email', 'phone', 'upiId', 'balance', 'lockedCoins', 'totalEarned',
-                               'taskEarned', 'kycStatus', 'status', 'source', 'createdAt'])
+                               'taskEarned', 'kycStatus', 'status', 'source', 'createdAt', 'referredBy'])
         && d.uid == uid
         && d.balance == 0 && d.lockedCoins == 0 && d.totalEarned == 0 && d.taskEarned == 0
         && d.kycStatus == 'none' && d.status == 'active'
         && strMax(d.name, 60) && strMax(d.get('email', ''), 200) && strMax(d.get('phone', ''), 15) && strMax(d.get('upiId', ''), 120)
-        && d.createdAt == request.time;
+        && d.createdAt == request.time
+        // Optional referral: only at signup, never self, and the referrer must be a real user.
+        && (!('referredBy' in d) || (d.referredBy is string && d.referredBy != uid
+             && d.referredBy.size() > 0 && d.referredBy.size() <= 128 && exists(docPath('users', d.referredBy))));
     }
 
     // Plain profile fields only. Balance, coins, KYC status, status etc. can't be touched here.
