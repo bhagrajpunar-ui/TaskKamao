@@ -9,6 +9,17 @@ const tabsEl = document.getElementById("tabs");
 const logoutBtn = document.getElementById("logoutBtn");
 const S = { fb: null, user: null, settings: {}, tab: "subs", subFilter: "pending", wdFilter: "pending" };
 
+function spellUid(id) {
+  return [...id].map((c, i) => {
+    let n = c;
+    if (/[0-9]/.test(c)) n = c === "0" ? "0 (zero)" : c + " (number)";
+    else if (c === "O") n = "O (capital o)"; else if (c === "o") n = "o (small o)";
+    else if (c === "I") n = "I (capital i)"; else if (c === "l") n = "l (small L)";
+    else if (/[A-Z]/.test(c)) n = c + " (capital)"; else if (/[a-z]/.test(c)) n = c + " (small)";
+    return `${i + 1}. ${esc(n)}`;
+  }).join("<br>");
+}
+
 async function boot() {
   if (!configIsSet()) { view.innerHTML = configBanner(); return; }
   try { S.fb = await loadFirebase(); }
@@ -34,7 +45,9 @@ async function boot() {
         <p>Admin banne ke liye Firebase Console &gt; Firestore mein collection <code>admins</code> banayein aur Document ID mein yeh UID daalein:</p>
         <p><code id="myUid" style="user-select:all;font-size:18px">${esc(u.uid)}</code></p>
         <p><button id="copyUid" class="btn" style="font-size:18px;padding:12px 20px">📋 UID Copy karein</button></p>
-        <p class="muted">(Ek field bhi daal dein, jaise <code>role = "owner"</code>.) Phir yeh page refresh karein.</p>${why ? `<p class="banner bad">Error: ${esc(why)}</p>` : `<p class="muted">Check: admins/${esc(u.uid)} document nahi mila.</p>`}</div>`;
+        <p class="muted">Har akshar alag se (galti pakadne ke liye):<br>${spellUid(u.uid)}</p>
+        <p><a class="btn" target="_blank" rel="noopener" href="https://console.firebase.google.com/project/${encodeURIComponent(S.fb.db.app.options.projectId)}/firestore/databases/-default-/data/~2Fadmins~2F${encodeURIComponent(u.uid)}">🔗 Firebase Console mein seedha yeh document kholo</a></p>
+        <p class="muted">(Ek field bhi daal dein, jaise <code>role = "owner"</code>.) Phir yeh page refresh karein. Project: <code>${esc(S.fb.db.app.options.projectId)}</code></p>${why ? `<p class="banner bad">Error: ${esc(why)}</p>` : `<p class="muted">Check: admins/${esc(u.uid)} document nahi mila.</p>`}</div>`;
       const cb = document.getElementById("copyUid");
       if (cb) cb.onclick = async () => {
         try { await navigator.clipboard.writeText(u.uid); cb.textContent = "✅ Copy ho gaya!"; }
