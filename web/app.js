@@ -580,3 +580,21 @@ function renderProfile() {
 }
 
 boot();
+
+// ---------------------------------------------------------------- install as app (PWA)
+(function setupInstall() {
+  if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+  const btn = document.getElementById("installBtn");
+  if (!btn) return;
+  let deferred = null;
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault(); deferred = e; btn.classList.remove("hidden");
+  });
+  btn.onclick = async () => {
+    if (!deferred) return;
+    deferred.prompt();
+    try { await deferred.userChoice; } catch {}
+    deferred = null; btn.classList.add("hidden");
+  };
+  window.addEventListener("appinstalled", () => { btn.classList.add("hidden"); toast("TaskKamao install ho gaya ✅"); });
+})();

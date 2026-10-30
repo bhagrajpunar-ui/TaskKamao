@@ -7,11 +7,14 @@
   <meta name="description" content="TaskKamao — chhote tasks poore karo, admin verify kare, coins kamao aur UPI par withdraw karo." />
   <title>TaskKamao — Tasks karo, coins kamao</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪙</text></svg>" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <header class="top">
     <div class="logo">🪙 TaskKamao</div>
+    <button id="installBtn" class="sm hidden" type="button">📲 App install karo</button>
     <button id="logoutBtn" class="sm hidden" type="button">Logout</button>
   </header>
   <main class="wrap" id="view"><div class="spin"></div></main>
@@ -24,6 +27,6 @@
   </nav>
   <div id="toast" class="toast"></div>
   <noscript><p class="wrap">TaskKamao chalane ke liye JavaScript on karein.</p></noscript>
-  <script type="module" src="app.js?v=4"></script>
+  <script type="module" src="app.js?v=5"></script>
 </body>
 </html>
