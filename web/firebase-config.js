@@ -10,12 +10,13 @@
 //  (Yeh keys public hoti hain; security Firestore rules se aati hai.)
 // =====================================================================
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "AIzaSyBWnqIghcSt0a2fOXshoKWQ2-kCifcuH70",
+  authDomain: "taskkamao-bcb15.firebaseapp.com",
+  projectId: "taskkamao-bcb15",
+  storageBucket: "taskkamao-bcb15.firebasestorage.app",
+  messagingSenderId: "613203070527",
+  appId: "1:613203070527:web:8ec7ef508f090f0d1ab28a",
+  measurementId: "G-FNE24BR026",
 };
 
 // Default app settings. Admin Firestore doc `config/app` mein same naam ki
