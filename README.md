@@ -162,3 +162,16 @@ Add the release + Play "App signing key" SHA-1/SHA-256 to Firebase (needed for p
 * Not compiled in this environment (no Flutter SDK); Functions TypeScript compiles cleanly with `tsc`.
 * Legal: get advice from a CA/lawyer on TDS/GST on rewards, the chance-based spin/scratch features, and
   India's online gaming rules before launch. You can switch off spin/scratch from the admin panel (tasks > active=false).
+
+---
+
+## 🌐 Website version (`web/`)
+
+TaskKamao ab browser mein bhi chalta hai — koi app install nahi, koi Cloud Functions nahi.
+Earnings sirf admin-approved tasks se; withdrawal requests admin manually UPI se pay karta hai.
+Koi Add Money / deposit / investment nahi.
+
+- Code: [`web/`](web/) · Setup (Hindi): [`web/README.md`](web/README.md)
+- URL: https://bhagrajpunar-ui.github.io/TaskKamao/ (admin: `/admin.html`)
+- Deploy: `.github/workflows/deploy-web.yml` (GitHub Pages, `web/**` push par)
+- Rules: root `firestore.rules` (Android app + website dono ke liye) · tests: `tests/firestore-rules.test.mjs`

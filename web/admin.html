@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#374151" />
+  <title>TaskKamao Admin</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    body { padding-bottom: 20px; }
+    header.top { background: linear-gradient(135deg, #374151, #111827); }
+    .tabs { flex-wrap: wrap; }
+    .tabs button { flex: 1 1 auto; }
+  </style>
+</head>
+<body class="wide">
+  <header class="top">
+    <div class="logo">🛠️ TaskKamao <span>Admin</span></div>
+    <a class="btn sm ghost" href="./">User site</a>
+    <button id="logoutBtn" class="sm hidden" type="button">Logout</button>
+  </header>
+  <main class="wrap">
+    <div class="tabs hidden" id="tabs">
+      <button type="button" data-t="subs" class="on">Submissions</button>
+      <button type="button" data-t="wds">Withdrawals</button>
+      <button type="button" data-t="tasks">Tasks</button>
+      <button type="button" data-t="users">Users</button>
+      <button type="button" data-t="settings">Settings</button>
+    </div>
+    <div id="view"><div class="spin"></div></div>
+  </main>
+  <div id="toast" class="toast"></div>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

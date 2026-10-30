@@ -1,16 +1,31 @@
 rules_version = '2';
 
-// TaskKamao Firestore rules.
-// Golden rule: the app can READ its own data but can NEVER write balances, coins,
-// transactions, withdrawals or referrals. Every write of money-like data happens in Cloud Functions
-// (Admin SDK bypasses these rules).
+// TaskKamao Firestore rules — shared by the Android app (Cloud Functions write money data with the
+// Admin SDK, which bypasses these rules) and the web app in web/ (which has no Cloud Functions, so a
+// few tightly-checked client writes are allowed below).
+//
+// Golden rules:
+//  * A user can NEVER raise their own balance. Coins are credited only by an admin approving a task
+//    submission (or by Cloud Functions for the Android app).
+//  * A user may only MOVE coins from balance -> lockedCoins, in the same batch that creates a pending
+//    withdrawal of exactly that many coins (coins reserved). Only admins settle withdrawals.
+//  * No deposits / add-money / investment collections exist.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && request.auth.token.admin == true; }
+    function docPath(col, id) { return /databases/$(database)/documents/$(col)/$(id); }
+    // Admin = custom claim admin:true (Android admin panel / setAdmin.js) OR a doc at admins/{uid} (web).
+    function isAdmin() {
+      return signedIn() && (request.auth.token.get('admin', false) == true || exists(docPath('admins', request.auth.uid)));
+    }
     function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
     function ownsDoc() { return signedIn() && resource.data.uid == request.auth.uid; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+    // App settings doc config/app (coinsPerRupee, minWithdrawRupees, ...); defaults when missing.
+    function cfg() { return exists(docPath('config', 'app')) ? get(docPath('config', 'app')).data : {}; }
+    function userActive(u) { return u.get('status', 'active') == 'active'; }
+    function strMax(v, n) { return v is string && v.size() <= n; }
 
     // Default: admins may read everything; nobody writes unless a rule below allows it.
     match /{document=**} {
@@ -18,17 +33,164 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ------------------------------------------------------------------ admins
+    // Create admins/{yourUid} by hand in the Firebase console. Nobody can write it from a client.
+    match /admins/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow write: if false;
+    }
+
+    // ------------------------------------------------------------------ users
     match /users/{uid} {
-      allow read: if isOwner(uid);
-      allow write: if false; // profile changes go through updateProfile / submitKyc functions
+      allow read: if isOwner(uid) || isAdmin();
+
+      // Web signup: profile starts at zero coins, KYC none, status active.
+      allow create: if isOwner(uid) && validNewUser(uid);
+
+      allow update: if isAdmin()
+        || (isOwner(uid) && (profileEdit() || kycSubmit() || withdrawReserve(uid)));
+
+      allow delete: if false;
 
       match /daily/{day} { allow read: if isOwner(uid); }
       match /quizAnswered/{qid} { allow read: if isOwner(uid); }
-      // /users/{uid}/private/* (full PAN) -> admin only, covered by the default rule
+
+      // /users/{uid}/private/kyc holds the full PAN. Owner may write it only while submitting KYC; admin reads
+      // it through the default rule. Owner cannot read it back.
+      match /private/{docId} {
+        allow create, update: if isOwner(uid) && docId == 'kyc'
+          && request.resource.data.keys().hasOnly(['name', 'pan', 'submittedAt'])
+          && request.resource.data.name is string && request.resource.data.name.size() >= 3 && request.resource.data.name.size() <= 80
+          && request.resource.data.pan is string && request.resource.data.pan.matches('^[A-Z]{5}[0-9]{4}[A-Z]$')
+          && request.resource.data.submittedAt == request.time
+          && get(docPath('users', uid)).data.get('kycStatus', 'none') in ['none', 'rejected'];
+      }
     }
 
-    match /transactions/{id} { allow read: if ownsDoc(); }
-    match /withdrawals/{id}  { allow read: if ownsDoc(); }
+    function validNewUser(uid) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['uid', 'name', 'email', 'phone', 'upiId', 'balance', 'lockedCoins', 'totalEarned',
+                               'taskEarned', 'kycStatus', 'status', 'source', 'createdAt'])
+        && d.uid == uid
+        && d.balance == 0 && d.lockedCoins == 0 && d.totalEarned == 0 && d.taskEarned == 0
+        && d.kycStatus == 'none' && d.status == 'active'
+        && strMax(d.name, 60) && strMax(d.get('email', ''), 200) && strMax(d.get('phone', ''), 15) && strMax(d.get('upiId', ''), 120)
+        && d.createdAt == request.time;
+    }
+
+    // Plain profile fields only. Balance, coins, KYC status, status etc. can't be touched here.
+    function profileEdit() {
+      let d = request.resource.data;
+      return changed().hasOnly(['name', 'phone', 'upiId', 'updatedAt'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 60
+        && strMax(d.get('phone', ''), 15) && strMax(d.get('upiId', ''), 120);
+    }
+
+    // User sends KYC for review (none/rejected -> pending). Only an admin can set verified/rejected.
+    function kycSubmit() {
+      let d = request.resource.data;
+      return changed().hasOnly(['kycStatus', 'kycName', 'panMasked', 'updatedAt'])
+        && resource.data.get('kycStatus', 'none') in ['none', 'rejected']
+        && d.kycStatus == 'pending'
+        && d.kycName is string && d.kycName.size() >= 3 && d.kycName.size() <= 80
+        && d.panMasked is string && d.panMasked.size() == 10;
+    }
+
+    // Reserve coins for a withdrawal: balance -X, lockedCoins +X, only together with creating
+    // withdrawals/{lastWithdrawalId} (status pending, coins X) in the same batch. One pending at a time.
+    function withdrawReserve(uid) {
+      let before = resource.data;
+      let after = request.resource.data;
+      let wPath = docPath('withdrawals', after.lastWithdrawalId);
+      let w = getAfter(wPath).data;
+      return changed().hasOnly(['balance', 'lockedCoins', 'hasPendingWithdrawal', 'lastWithdrawalId'])
+        && after.lastWithdrawalId is string
+        && before.get('hasPendingWithdrawal', false) != true
+        && after.hasPendingWithdrawal == true
+        && !exists(wPath) && existsAfter(wPath)
+        && w.uid == uid && w.status == 'pending' && w.coins is int && w.coins > 0
+        && after.balance == before.balance - w.coins
+        && after.balance >= 0
+        && after.lockedCoins == before.get('lockedCoins', 0) + w.coins;
+    }
+
+    // ------------------------------------------------------------------ withdrawals
+    match /withdrawals/{wid} {
+      allow read: if ownsDoc() || isAdmin();
+      allow create: if signedIn() && validWithdrawal(wid);
+      allow update: if isAdmin();   // paid (with UTR) / rejected (+ refund) — admin only
+      allow delete: if false;
+    }
+
+    function validWithdrawal(wid) {
+      let d = request.resource.data;
+      let uPath = docPath('users', request.auth.uid);
+      let u = get(uPath).data;
+      let ua = getAfter(uPath).data;
+      let c = cfg();
+      return d.keys().hasOnly(['uid', 'name', 'upiId', 'amountRupees', 'coins', 'status', 'source', 'createdAt', 'updatedAt'])
+        && d.uid == request.auth.uid
+        && d.status == 'pending'
+        && d.amountRupees is int && d.coins is int
+        && d.amountRupees >= c.get('minWithdrawRupees', 50)
+        && d.amountRupees <= c.get('maxWithdrawRupeesPerRequest', 500)
+        && d.coins == d.amountRupees * c.get('coinsPerRupee', 100)
+        && d.coins <= u.balance                                   // amount <= balance
+        && d.upiId is string && d.upiId.matches('^[a-z0-9._-]{2,256}@[a-z][a-z0-9.-]{1,64}$')
+        && strMax(d.get('name', ''), 80)
+        && d.createdAt == request.time
+        && userActive(u)
+        && (c.get('requireKycForWithdraw', true) == false || u.get('kycStatus', 'none') == 'verified')
+        && ua.lastWithdrawalId == wid                             // coins reserved in the same batch
+        && ua.balance == u.balance - d.coins;
+    }
+
+    // ------------------------------------------------------------------ task submissions (web)
+    // Doc id = {taskId}_{uid}: one submission per task per user; a rejected one may be re-submitted.
+    match /submissions/{sid} {
+      allow read: if (signedIn() && resource.data.uid == request.auth.uid) || isAdmin();
+      allow create: if signedIn() && validSubmission(sid);
+      allow update: if isAdmin() || resubmit();   // approve / reject: admin only
+      allow delete: if isAdmin();
+    }
+
+    function validProof(d) {
+      return d.proofText is string && d.proofText.size() >= 3 && d.proofText.size() <= 2000
+        && strMax(d.get('proofLink', ''), 500);
+    }
+
+    function validSubmission(sid) {
+      let d = request.resource.data;
+      let t = get(docPath('tasks', d.taskId)).data;
+      return d.keys().hasOnly(['uid', 'userName', 'taskId', 'taskTitle', 'reward', 'proofText', 'proofLink', 'status', 'createdAt'])
+        && d.uid == request.auth.uid
+        && d.taskId is string
+        && sid == d.taskId + '_' + request.auth.uid
+        && d.status == 'pending'
+        && d.createdAt == request.time
+        && t.get('active', false) == true && t.get('type', '') == 'proof'
+        && d.reward == t.reward
+        && strMax(d.get('userName', ''), 60) && strMax(d.get('taskTitle', ''), 120)
+        && validProof(d)
+        && userActive(get(docPath('users', request.auth.uid)).data);
+    }
+
+    function resubmit() {
+      let d = request.resource.data;
+      return signedIn() && resource.data.uid == request.auth.uid
+        && resource.data.status == 'rejected'
+        && changed().hasOnly(['proofText', 'proofLink', 'status', 'rejectReason', 'createdAt'])
+        && d.status == 'pending' && d.createdAt == request.time
+        && validProof(d)
+        && get(docPath('tasks', resource.data.taskId)).data.get('active', false) == true
+        && userActive(get(docPath('users', request.auth.uid)).data);
+    }
+
+    // ------------------------------------------------------------------ ledger & misc (Android app)
+    match /transactions/{id} {
+      allow read: if ownsDoc() || isAdmin();
+      allow create: if isAdmin();   // web admin writes a ledger entry when approving / paying
+    }
     match /adSessions/{id}   { allow read: if ownsDoc(); }
 
     match /referrals/{friendUid} {
@@ -38,7 +200,7 @@ service cloud.firestore {
 
     match /leaderboard/{uid} { allow read: if signedIn(); }
 
-    // Content managed from the admin panel
+    // Content managed from the admin panels
     match /config/{id}          { allow read: if signedIn(); allow write: if isAdmin(); }
     match /tasks/{id}           { allow read: if signedIn(); allow write: if isAdmin(); }
     match /quizQuestions/{id}   { allow read: if signedIn(); allow write: if isAdmin(); }
