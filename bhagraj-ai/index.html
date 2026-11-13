@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f0f1a">
+<title>Bhagraj AI</title>
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#0f0f1a;color:#eee;height:100dvh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#17172a;border-bottom:1px solid #2a2a44}
+header h1{font-size:18px;margin:0;flex:1;background:linear-gradient(90deg,#ff9a3c,#ff4d8d,#7c5cff);-webkit-background-clip:text;color:transparent}
+button{font:inherit;border:0;border-radius:10px;padding:8px 12px;cursor:pointer;background:#2a2a44;color:#eee}
+.seg{display:flex;background:#22223a;border-radius:12px;padding:3px;gap:3px}
+.seg button{padding:6px 10px;font-size:13px;background:transparent}
+.seg button.on{background:#7c5cff;color:#fff}
+#bar{display:flex;gap:8px;padding:8px 12px;align-items:center;flex-wrap:wrap}
+#chat{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.m{max-width:88%;padding:10px 12px;border-radius:14px;white-space:pre-wrap;word-wrap:break-word;line-height:1.45}
+.u{align-self:flex-end;background:#7c5cff;color:#fff;border-bottom-right-radius:4px}
+.a{align-self:flex-start;background:#1e1e33;border-bottom-left-radius:4px}
+.a small{display:block;opacity:.55;font-size:11px;margin-bottom:4px}
+.a img{max-width:100%;border-radius:10px;display:block;margin-top:6px}
+.a a.dl{display:inline-block;margin-top:6px;color:#ff9a3c;font-size:13px}
+.err{background:#4a1f2a}
+form{display:flex;gap:8px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#17172a;border-top:1px solid #2a2a44}
+textarea{flex:1;resize:none;font:inherit;background:#0f0f1a;color:#eee;border:1px solid #2a2a44;border-radius:12px;padding:10px;max-height:140px}
+#send{background:linear-gradient(135deg,#ff4d8d,#7c5cff);color:#fff;font-weight:600}
+dialog{background:#17172a;color:#eee;border:1px solid #2a2a44;border-radius:16px;width:min(94vw,480px)}
+dialog label{display:block;font-size:13px;margin:10px 0 4px;opacity:.8}
+dialog input,dialog select{width:100%;font:inherit;padding:9px;border-radius:10px;border:1px solid #2a2a44;background:#0f0f1a;color:#eee}
+.row{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+.hint{font-size:12px;opacity:.6;margin-top:6px}
+.empty{margin:auto;text-align:center;opacity:.7;max-width:320px}
+.empty b{font-size:22px;display:block;margin-bottom:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>⚡ Bhagraj AI</h1>
+  <button id="newBtn" title="Nayi chat">＋</button>
+  <button id="setBtn" title="Settings">⚙️</button>
+</header>
+<div id="bar">
+  <div class="seg" id="prov"><button data-v="openai" class="on">ChatGPT</button><button data-v="gemini">Gemini</button></div>
+  <div class="seg" id="mode"><button data-v="chat" class="on">💬 Chat</button><button data-v="image">🎨 Image</button></div>
+</div>
+<div id="chat"></div>
+<form id="f">
+  <textarea id="q" rows="1" placeholder="Kuch bhi poocho..."></textarea>
+  <button id="send">Bhejo</button>
+</form>
+
+<dialog id="dlg">
+  <h3 style="margin-top:0">Settings</h3>
+  <label>OpenAI (ChatGPT) API key</label><input id="kOpenai" type="password" placeholder="sk-...">
+  <label>Gemini API key</label><input id="kGemini" type="password" placeholder="AIza...">
+  <label>ChatGPT chat model</label><input id="mOpenaiChat" list="lOpenai">
+  <label>ChatGPT image model</label><input id="mOpenaiImg" list="lOpenai">
+  <label>Gemini chat model</label><input id="mGeminiChat" list="lGemini">
+  <label>Gemini image model</label><input id="mGeminiImg" list="lGemini">
+  <datalist id="lOpenai"></datalist><datalist id="lGemini"></datalist>
+  <button type="button" id="loadModels" style="margin-top:10px">🔄 Models ki list laao</button>
+  <label>AI ka style (system prompt)</label><input id="sys">
+  <p class="hint">Keys sirf isi phone ke browser mein save hoti hain, kahin aur nahi jaati.</p>
+  <div class="row"><button type="button" id="clearKeys">Keys hatao</button><button type="button" id="saveSet" style="background:#7c5cff">Save</button></div>
+</dialog>
+
+<script>
+const $=s=>document.querySelector(s);
+const DEF={mOpenaiChat:'gpt-5-mini',mOpenaiImg:'gpt-image-2.5-flare',mGeminiChat:'gemini-3.5-flash',mGeminiImg:'gemini-nano-banana-2.1',
+ sys:'Tum "Bhagraj AI" ho, Bhagraj ka personal AI agent. Hinglish mein, seedha aur kaam ka jawab do. Reels, quotes, scripts aur business ke kaam mein expert ho.'};
+const S=k=>localStorage.getItem('bai_'+k)??DEF[k]??'';
+const W=(k,v)=>localStorage.setItem('bai_'+k,v);
+let prov=S('prov')||'openai',mode='chat',hist=JSON.parse(localStorage.getItem('bai_hist')||'[]');
+const chat=$('#chat');
+
+function seg(id,val,cb){document.querySelectorAll(id+' button').forEach(b=>{b.classList.toggle('on',b.dataset.v===val);b.onclick=()=>{document.querySelectorAll(id+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cb(b.dataset.v)}})}
+seg('#prov',prov,v=>{prov=v;W('prov',v)});
+seg('#mode',mode,v=>{mode=v;$('#q').placeholder=v==='image'?'Kaisi image chahiye? Detail mein likho...':'Kuch bhi poocho...'});
+
+function save(){localStorage.setItem('bai_hist',JSON.stringify(hist.slice(-60)))}
+function render(){chat.innerHTML='';if(!hist.length){chat.innerHTML='<div class="empty"><b>Namaste Bhagraj 👋</b>ChatGPT ya Gemini chuno, Chat ya Image mode lo, aur shuru karo. Pehli baar ⚙️ mein API key daalo.</div>';return}hist.forEach(add)}
+function add(m){const d=document.createElement('div');d.className='m '+(m.role==='user'?'u':'a')+(m.err?' err':'');
+ if(m.role!=='user'){const s=document.createElement('small');s.textContent=(m.prov==='gemini'?'Gemini':'ChatGPT')+(m.img?' · Image':'');d.appendChild(s)}
+ if(m.text){d.appendChild(document.createTextNode(m.text))}
+ if(m.img){const i=new Image();i.src=m.img;d.appendChild(i);const a=document.createElement('a');a.className='dl';a.href=m.img;a.download='bhagraj-ai-'+Date.now()+'.png';a.textContent='⬇️ Download';d.appendChild(a)}
+ chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d}
+
+async function j(r){const t=await r.text();let x;try{x=JSON.parse(t)}catch{throw new Error(t.slice(0,300))}if(!r.ok)throw new Error(x.error?.message||t.slice(0,300));return x}
+
+async function openaiChat(){const key=S('kOpenai');if(!key)throw new Error('⚙️ Settings mein OpenAI key daalo.');
+ const msgs=[{role:'system',content:S('sys')}].concat(hist.filter(m=>!m.img&&!m.err&&m.text).slice(-20).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text})));
+ const x=await j(await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model:S('mOpenaiChat'),messages:msgs})}));
+ return{text:x.choices?.[0]?.message?.content||'(khaali jawab)'}}
+async function openaiImg(p){const key=S('kOpenai');if(!key)throw new Error('⚙️ Settings mein OpenAI key daalo.');
+ const x=await j(await fetch('https://api.openai.com/v1/images/generations',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model:S('mOpenaiImg'),prompt:p,size:'1024x1024',n:1})}));
+ const d=x.data?.[0];return{img:d?.b64_json?'data:image/png;base64,'+d.b64_json:d?.url}}
+async function gemini(model,body){const key=S('kGemini');if(!key)throw new Error('⚙️ Settings mein Gemini key daalo.');
+ return j(await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+encodeURIComponent(model)+':generateContent',{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)}))}
+async function geminiChat(){const contents=hist.filter(m=>!m.img&&!m.err&&m.text).slice(-20).map(m=>({role:m.role==='user'?'user':'model',parts:[{text:m.text}]}));
+ const x=await gemini(S('mGeminiChat'),{systemInstruction:{parts:[{text:S('sys')}]},contents});
+ return{text:(x.candidates?.[0]?.content?.parts||[]).map(p=>p.text||'').join('')||'(khaali jawab)'}}
+async function geminiImg(p){const x=await gemini(S('mGeminiImg'),{contents:[{parts:[{text:p}]}],generationConfig:{responseModalities:['TEXT','IMAGE']}});
+ const parts=x.candidates?.[0]?.content?.parts||[];const im=parts.find(q=>q.inlineData||q.inline_data);const d=im&&(im.inlineData||im.inline_data);
+ return{img:d?'data:'+(d.mimeType||d.mime_type||'image/png')+';base64,'+d.data:null,text:parts.map(q=>q.text||'').join('').trim()}}
+
+$('#f').onsubmit=async e=>{e.preventDefault();const q=$('#q').value.trim();if(!q)return;$('#q').value='';
+ if(!hist.length)chat.innerHTML='';const um={role:'user',text:q};hist.push(um);add(um);
+ const wait=add({role:'ai',prov,text:mode==='image'?'🎨 Image ban rahi hai...':'Soch raha hoon...'});$('#send').disabled=true;
+ try{let r;if(mode==='image'){r=prov==='gemini'?await geminiImg(q):await openaiImg(q);if(!r.img)throw new Error(r.text||'Image nahi bani, prompt badal ke try karo.')}
+  else r=prov==='gemini'?await geminiChat():await openaiChat();
+  const am={role:'ai',prov,text:r.text||'',img:r.img};wait.remove();hist.push(am);add(am)}
+ catch(err){wait.remove();const em={role:'ai',prov,err:1,text:'❌ '+err.message};hist.push(em);add(em)}
+ save();$('#send').disabled=false};
+$('#q').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&window.innerWidth>700){e.preventDefault();$('#f').requestSubmit()}});
+$('#newBtn').onclick=()=>{if(confirm('Nayi chat shuru karein? Purani mit jayegi.')){hist=[];save();render()}};
+
+const F=['kOpenai','kGemini','mOpenaiChat','mOpenaiImg','mGeminiChat','mGeminiImg','sys'];
+$('#setBtn').onclick=()=>{F.forEach(k=>$('#'+k).value=S(k));$('#dlg').showModal()};
+$('#saveSet').onclick=()=>{F.forEach(k=>W(k,$('#'+k).value.trim()));$('#dlg').close()};
+$('#clearKeys').onclick=()=>{localStorage.removeItem('bai_kOpenai');localStorage.removeItem('bai_kGemini');$('#kOpenai').value='';$('#kGemini').value=''};
+$('#loadModels').onclick=async()=>{const ko=$('#kOpenai').value.trim(),kg=$('#kGemini').value.trim();let msg=[];
+ if(ko)try{const x=await j(await fetch('https://api.openai.com/v1/models',{headers:{Authorization:'Bearer '+ko}}));$('#lOpenai').innerHTML=x.data.map(m=>'<option value="'+m.id+'">').join('');msg.push('ChatGPT: '+x.data.length)}catch(e){msg.push('ChatGPT error: '+e.message)}
+ if(kg)try{const x=await j(await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':kg}}));$('#lGemini').innerHTML=x.models.map(m=>'<option value="'+m.name.replace('models/','')+'">').join('');msg.push('Gemini: '+x.models.length)}catch(e){msg.push('Gemini error: '+e.message)}
+ alert(msg.join('\n')||'Pehle key daalo')};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+render();
+</script>
+</body>
+</html>
