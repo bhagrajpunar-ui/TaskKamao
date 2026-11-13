@@ -42,7 +42,7 @@ dialog input,dialog select{width:100%;font:inherit;padding:9px;border-radius:10p
   <button id="setBtn" title="Settings">⚙️</button>
 </header>
 <div id="bar">
-  <div class="seg" id="prov"><button data-v="openai" class="on">ChatGPT</button><button data-v="gemini">Gemini</button></div>
+  <div class="seg" id="prov"><button data-v="free">🆓 Free</button><button data-v="openai">ChatGPT</button><button data-v="gemini">Gemini</button></div>
   <div class="seg" id="mode"><button data-v="chat" class="on">💬 Chat</button><button data-v="image">🎨 Image</button></div>
 </div>
 <div id="chat"></div>
@@ -72,7 +72,7 @@ const DEF={mOpenaiChat:'gpt-5-mini',mOpenaiImg:'gpt-image-2.5-flare',mGeminiChat
  sys:'Tum "Bhagraj AI" ho, Bhagraj ka personal AI agent. Hinglish mein, seedha aur kaam ka jawab do. Reels, quotes, scripts aur business ke kaam mein expert ho.'};
 const S=k=>localStorage.getItem('bai_'+k)??DEF[k]??'';
 const W=(k,v)=>localStorage.setItem('bai_'+k,v);
-let prov=S('prov')||'openai',mode='chat',hist=JSON.parse(localStorage.getItem('bai_hist')||'[]');
+let prov=S('prov')||'free',mode='chat',hist=JSON.parse(localStorage.getItem('bai_hist')||'[]');
 const chat=$('#chat');
 
 function seg(id,val,cb){document.querySelectorAll(id+' button').forEach(b=>{b.classList.toggle('on',b.dataset.v===val);b.onclick=()=>{document.querySelectorAll(id+' button').forEach(x=>x.classList.remove('on'));b.classList.add('on');cb(b.dataset.v)}})}
@@ -80,15 +80,22 @@ seg('#prov',prov,v=>{prov=v;W('prov',v)});
 seg('#mode',mode,v=>{mode=v;$('#q').placeholder=v==='image'?'Kaisi image chahiye? Detail mein likho...':'Kuch bhi poocho...'});
 
 function save(){localStorage.setItem('bai_hist',JSON.stringify(hist.slice(-60)))}
-function render(){chat.innerHTML='';if(!hist.length){chat.innerHTML='<div class="empty"><b>Namaste Bhagraj 👋</b>ChatGPT ya Gemini chuno, Chat ya Image mode lo, aur shuru karo. Pehli baar ⚙️ mein API key daalo.</div>';return}hist.forEach(add)}
+function render(){chat.innerHTML='';if(!hist.length){chat.innerHTML='<div class="empty"><b>Namaste Bhagraj 👋</b>ChatGPT ya Gemini chuno, Chat ya Image mode lo, aur shuru karo. 🆓 Free bina key ke chalta hai. Behtar jawab ke liye ⚙️ mein ChatGPT ya Gemini key daal sakte ho.</div>';return}hist.forEach(add)}
 function add(m){const d=document.createElement('div');d.className='m '+(m.role==='user'?'u':'a')+(m.err?' err':'');
- if(m.role!=='user'){const s=document.createElement('small');s.textContent=(m.prov==='gemini'?'Gemini':'ChatGPT')+(m.img?' · Image':'');d.appendChild(s)}
+ if(m.role!=='user'){const s=document.createElement('small');s.textContent=({gemini:'Gemini',openai:'ChatGPT',free:'Free AI'}[m.prov]||'AI')+(m.img?' · Image':'');d.appendChild(s)}
  if(m.text){d.appendChild(document.createTextNode(m.text))}
  if(m.img){const i=new Image();i.src=m.img;d.appendChild(i);const a=document.createElement('a');a.className='dl';a.href=m.img;a.download='bhagraj-ai-'+Date.now()+'.png';a.textContent='⬇️ Download';d.appendChild(a)}
  chat.appendChild(d);chat.scrollTop=chat.scrollHeight;return d}
 
 async function j(r){const t=await r.text();let x;try{x=JSON.parse(t)}catch{throw new Error(t.slice(0,300))}if(!r.ok)throw new Error(x.error?.message||t.slice(0,300));return x}
 
+function lim(r){if(r.status===402||r.status===429){const w=r.headers.get('Retry-After');throw new Error('Free wala thoda ruk ke chalta hai. '+(w?w+' second':'30-45 second')+' baad dobara bhejo.')}}
+async function freeChat(){const msgs=[{role:'system',content:S('sys')}].concat(hist.filter(m=>!m.img&&!m.err&&m.text).slice(-12).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text})));
+ const r=await fetch('https://text.pollinations.ai/openai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:msgs})});lim(r);
+ const x=await j(r);return{text:x.choices?.[0]?.message?.content||'(khaali jawab)'}}
+async function freeImg(p){const r=await fetch('https://image.pollinations.ai/prompt/'+encodeURIComponent(p)+'?width=1024&height=1024&nologo=true&seed='+Math.floor(Math.random()*1e9));lim(r);
+ if(!r.ok)throw new Error('Image nahi bani ('+r.status+'), thodi der baad try karo.');const b=await r.blob();
+ return{img:await new Promise(res=>{const f=new FileReader();f.onload=()=>res(f.result);f.readAsDataURL(b)})}}
 async function openaiChat(){const key=S('kOpenai');if(!key)throw new Error('⚙️ Settings mein OpenAI key daalo.');
  const msgs=[{role:'system',content:S('sys')}].concat(hist.filter(m=>!m.img&&!m.err&&m.text).slice(-20).map(m=>({role:m.role==='user'?'user':'assistant',content:m.text})));
  const x=await j(await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key},body:JSON.stringify({model:S('mOpenaiChat'),messages:msgs})}));
@@ -108,8 +115,8 @@ async function geminiImg(p){const x=await gemini(S('mGeminiImg'),{contents:[{par
 $('#f').onsubmit=async e=>{e.preventDefault();const q=$('#q').value.trim();if(!q)return;$('#q').value='';
  if(!hist.length)chat.innerHTML='';const um={role:'user',text:q};hist.push(um);add(um);
  const wait=add({role:'ai',prov,text:mode==='image'?'🎨 Image ban rahi hai...':'Soch raha hoon...'});$('#send').disabled=true;
- try{let r;if(mode==='image'){r=prov==='gemini'?await geminiImg(q):await openaiImg(q);if(!r.img)throw new Error(r.text||'Image nahi bani, prompt badal ke try karo.')}
-  else r=prov==='gemini'?await geminiChat():await openaiChat();
+ try{let r;if(mode==='image'){r=prov==='free'?await freeImg(q):prov==='gemini'?await geminiImg(q):await openaiImg(q);if(!r.img)throw new Error(r.text||'Image nahi bani, prompt badal ke try karo.')}
+  else r=prov==='free'?await freeChat():prov==='gemini'?await geminiChat():await openaiChat();
   const am={role:'ai',prov,text:r.text||'',img:r.img};wait.remove();hist.push(am);add(am)}
  catch(err){wait.remove();const em={role:'ai',prov,err:1,text:'❌ '+err.message};hist.push(em);add(em)}
  save();$('#send').disabled=false};
